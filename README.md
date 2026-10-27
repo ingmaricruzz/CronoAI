@@ -6,8 +6,10 @@ Es un único archivo `index.html`: no requiere instalación, servidor ni base de
 
 ## Cómo se usa
 
+La primera vez, la herramienta abre en blanco y arranca un **tutorial interactivo** que recorre cada sección con un proyecto de ejemplo. Se puede saltar en cualquier momento (también con *Esc*); al final se elige entre empezar en blanco o quedarse con el ejemplo. Para repetirlo, usa el botón **«Tutorial»** del encabezado.
+
 1. **Parámetros:** nombre del proyecto, fecha de inicio (por defecto, hoy), número de desarrolladores, holgura en semanas y días no laborables adicionales.
-2. **Historias de usuario:** escríbelas en la tabla, pégalas desde Excel (columnas *Código, Nombre, Puntos de historia, Dependencias*) o ábrelas desde un archivo `.xlsx`.
+2. **Historias de usuario:** escríbelas en la tabla, pégalas desde Excel (columnas *Código, Nombre, Puntos de historia, Dependencias*) o ábrelas desde un archivo `.xlsx`. Con **«Cargar ejemplo»** puedes ver un proyecto de muestra.
 3. **Resultado:** la página muestra al instante las fechas de inicio y fin, la línea de tiempo (por historia o por desarrollador), el cronograma diario y el resumen por historia.
 4. **Descargar Excel:** genera el archivo con el cronograma para compartirlo con el equipo.
 

@@ -30,6 +30,7 @@
   header p { margin: 4px 0 0; color: var(--muted); }
   main { display: grid; grid-template-columns: minmax(340px, 540px) 1fr; gap: 16px; padding: 12px 24px 32px; align-items: start; }
   @media (max-width: 1000px) { main { grid-template-columns: 1fr; padding: 12px 16px 24px; } header { padding: 16px 16px 4px; } }
+  main > section { min-width: 0; }
   .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; min-width: 0; }
   .panel + .panel { margin-top: 16px; }
   h2 { font-size: 15px; margin: 0 0 12px; }
@@ -48,6 +49,8 @@
   button:hover { border-color: var(--accent); }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   button.icon { padding: 2px 8px; color: var(--muted); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button:disabled:hover { border-color: var(--border); }
   .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border-bottom: 1px solid var(--border); padding: 5px 6px; text-align: left; vertical-align: middle; }
@@ -88,23 +91,40 @@
   dialog::backdrop { background: rgba(0,0,0,.35); }
   dialog textarea { min-height: 200px; }
   .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .msgs .info { background: var(--accent-soft); color: var(--text); }
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  #tourBlock { position: fixed; inset: 0; z-index: 1000; }
+  #tourSpot { position: fixed; z-index: 1001; border-radius: 8px; pointer-events: none;
+    box-shadow: 0 0 0 9999px rgba(15, 23, 35, .55); transition: all .25s ease; }
+  #tourSpot.centro { top: 50%; left: 50%; width: 0; height: 0; }
+  #tourCard { position: fixed; z-index: 1002; width: min(360px, calc(100vw - 32px)); background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 10px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  #tourCard h3 { margin: 0 0 6px; font-size: 16px; }
+  #tourCard p { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+  #tourCard .pie { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+  #tourCard .paso { font-size: 12px; color: var(--muted); margin-right: auto; }
+  #tourCard .saltar { border: none; background: none; color: var(--muted); padding: 6px 4px; text-decoration: underline; }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <header>
-  <h1>CronoAI · Generador de cronograma</h1>
-  <p>1 punto de historia = 4 horas = dedicación diaria máxima de un desarrollador. Lunes a viernes, sin festivos.</p>
+  <div>
+    <h1>CronoAI · Generador de cronograma</h1>
+    <p>1 punto de historia = 4 horas = dedicación diaria máxima de un desarrollador. Lunes a viernes, sin festivos.</p>
+  </div>
+  <button id="btnTour" title="Recorrido guiado por la herramienta">Tutorial</button>
 </header>
 
 <main>
   <section>
-    <div class="panel">
+    <div class="panel" id="pnlParams">
       <h2>Parámetros</h2>
       <div class="field">
         <label for="proyecto">Proyecto</label>
         <input id="proyecto" placeholder="Nombre del proyecto">
       </div>
-      <div class="grid2">
+      <div class="grid2" id="fEquipo">
         <div class="field">
           <label for="inicio">Fecha de inicio</label>
           <input id="inicio" type="date">
@@ -114,23 +134,23 @@
           <input id="devs" type="number" min="1" max="50" step="1">
         </div>
       </div>
-      <div class="field">
+      <div class="field" id="fHolgura">
         <label for="holguraSemanas">Holgura (semanas)</label>
         <input id="holguraSemanas" type="number" min="0" step="0.2" inputmode="decimal" placeholder="0">
         <div class="hint">1 semana = 5 días hábiles (lunes a viernes; los festivos y días no laborables no cuentan). Los días se reparten por igual entre las HU y cada HU los recibe justo después de terminar.</div>
       </div>
-      <div class="field">
+      <div class="field" id="fFestivos">
         <label class="check"><input id="festivosCO" type="checkbox"> Excluir festivos de Colombia (Ley Emiliani, calculados para cualquier año)</label>
       </div>
-      <div class="field">
+      <div class="field" id="fNoLaborales">
         <label for="noLaborales">Otros días no laborables (vacaciones colectivas, días de la empresa…)</label>
         <textarea id="noLaborales" placeholder="Una fecha o rango por línea, p. ej.:&#10;2026-12-24&#10;24/12/2026&#10;2026-12-28 a 2027-01-08"></textarea>
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="pnlHus">
       <h2>Historias de usuario</h2>
-      <div class="scroll">
+      <div class="scroll" id="tblHus">
         <table class="hu-table">
           <thead><tr><th>Código</th><th>Nombre</th><th>Puntos</th><th>Dependencias</th><th></th></tr></thead>
           <tbody id="huBody"></tbody>
@@ -138,18 +158,18 @@
         </table>
       </div>
       <div class="hint">Dependencias: códigos separados por coma o «y» (p. ej. «HU01, HU02 y HU03»), o «No». Flujo continuo: la HU dependiente arranca el mismo día en que se termina su predecesora (p. ej. «HU01 (Dev.1) / HU02 (Dev.2)»).</div>
-      <div class="toolbar">
+      <div class="toolbar" id="barHus">
         <button id="btnAdd">+ Agregar HU</button>
         <button id="btnPaste">Pegar desde Excel</button>
         <button id="btnImport" title="Abre un Excel exportado por esta herramienta (recupera todo el proyecto) o cualquier Excel con columnas Código y Puntos de historia (sólo las historias)">Abrir Excel</button>
         <input id="fileImport" type="file" accept=".xlsx" hidden>
-        <button id="btnReset" title="Reemplaza los datos actuales por el proyecto de ejemplo">Restablecer ejemplo</button>
+        <button id="btnReset" title="Reemplaza los datos actuales por el proyecto de ejemplo">Cargar ejemplo</button>
       </div>
     </div>
   </section>
 
   <section>
-    <div class="panel">
+    <div class="panel" id="pnlResultado">
       <div class="msgs" id="msgs"></div>
       <div class="cards" id="cards"></div>
       <div class="toolbar">
@@ -157,7 +177,7 @@
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="pnlGantt">
       <h2>Línea de tiempo</h2>
       <div class="tabs">
         <button data-view="hu" class="on">Por historia</button>
@@ -167,7 +187,7 @@
       <div class="legend" id="legend"></div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="pnlSched">
       <h2>Cronograma diario</h2>
       <div class="scroll"><table class="sched" id="sched"></table></div>
     </div>
@@ -178,6 +198,21 @@
     </div>
   </section>
 </main>
+
+<div id="tour" hidden>
+  <div id="tourBlock"></div>
+  <div id="tourSpot"></div>
+  <div id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitulo">
+    <h3 id="tourTitulo"></h3>
+    <p id="tourTexto"></p>
+    <div class="pie">
+      <span class="paso" id="tourPaso"></span>
+      <button class="saltar" id="tourSaltar">Saltar tutorial</button>
+      <button id="tourAnt">Anterior</button>
+      <button class="primary" id="tourSig">Siguiente</button>
+    </div>
+  </div>
+</div>
 
 <dialog id="dlgPaste">
   <h2>Pegar historias desde Excel</h2>
@@ -494,13 +529,17 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
       var s = JSON.parse(localStorage.getItem(CLAVE));
       if (s && Array.isArray(s.hus)) return s;
     } catch (e) { /* sin almacenamiento disponible */ }
-    return ejemplo();
+    return vacio();
   }
-  // El ejemplo arranca en la fecha de hoy (hora local del equipo)
-  function ejemplo() {
-    var e = JSON.parse(JSON.stringify(EJEMPLO)), h = new Date();
-    e.inicio = h.getFullYear() + '-' + ('0' + (h.getMonth() + 1)).slice(-2) + '-' + ('0' + h.getDate()).slice(-2);
-    return e;
+  // Fecha de hoy en hora local del equipo
+  function hoy() {
+    var h = new Date();
+    return h.getFullYear() + '-' + ('0' + (h.getMonth() + 1)).slice(-2) + '-' + ('0' + h.getDate()).slice(-2);
+  }
+  function ejemplo() { var e = JSON.parse(JSON.stringify(EJEMPLO)); e.inicio = hoy(); return e; }
+  function vacio() { return { proyecto: '', inicio: hoy(), devs: 2, holguraSemanas: 0, festivosCO: true, noLaborales: '', hus: [] }; }
+  function tieneHus(s) {
+    return s.hus.some(function (h) { return [h.codigo, h.nombre, h.puntos].some(function (v) { return String(v == null ? '' : v).trim(); }); });
   }
   function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(state)); } catch (e) { /* ignorado */ } }
 
@@ -532,7 +571,7 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
         '<td><input class="pts num" data-f="puntos" inputmode="decimal" value="' + esc(h.puntos) + '"></td>' +
         '<td><input data-f="deps" value="' + esc(h.deps) + '"></td>' +
         '<td><button class="icon" data-del="' + i + '" title="Eliminar">✕</button></td></tr>';
-    }).join('');
+    }).join('') || '<tr><td colspan="5" class="hint">Aún no hay historias. Usa «+ Agregar HU», «Pegar desde Excel» o «Abrir Excel».</td></tr>';
   }
   $('huBody').addEventListener('input', function (e) {
     var f = e.target.getAttribute('data-f'); if (!f) return;
@@ -550,7 +589,7 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     var inputs = $('huBody').querySelectorAll('tr:last-child input'); if (inputs[1]) inputs[1].focus();
   });
   $('btnReset').addEventListener('click', function () {
-    if (!confirm('¿Reemplazar los datos actuales por el ejemplo?')) return;
+    if (tieneHus(state) && !confirm('¿Reemplazar los datos actuales por el proyecto de ejemplo?')) return;
     state = ejemplo(); pintarParametros(); pintarHus(); cambio();
   });
 
@@ -637,6 +676,12 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     resultado = E.generar(state);
     var total = state.hus.reduce(function (s, h) { var v = Number(String(h.puntos).replace(',', '.')); return s + (v > 0 ? v : 0); }, 0);
     $('huTotal').textContent = n(total);
+    if (!tieneHus(state)) {
+      $('msgs').innerHTML = '<div class="info">Agrega tus historias de usuario (o pégalas desde Excel) para ver el cronograma. ¿Primera vez? Haz clic en «Tutorial».</div>';
+      $('btnExport').disabled = true;
+      ['cards', 'gantt', 'legend', 'sched', 'huSummary'].forEach(function (id) { $(id).innerHTML = ''; });
+      return;
+    }
     $('msgs').innerHTML = resultado.errores.map(function (m) { return '<div class="err">' + esc(m) + '</div>'; }).join('') +
       resultado.advertencias.map(function (m) { return '<div class="warn">' + esc(m) + '</div>'; }).join('');
     var ok = !resultado.errores.length;
@@ -900,7 +945,99 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     });
   }
 
+  // ---------- Tutorial ----------
+  // Si no hay historias, el recorrido carga el ejemplo para mostrar resultados; al final se elige si se conserva
+  var CLAVE_TOUR = 'cronoAI.tutorial';
+  var PASOS = [
+    { t: 'Bienvenido a CronoAI', x: 'En un minuto te mostramos cómo armar el cronograma de un proyecto a partir de sus historias de usuario. Puedes saltar el tutorial cuando quieras y repetirlo con el botón «Tutorial».' },
+    { el: ['fEquipo'], t: 'Fecha de inicio y equipo', x: 'Indica cuándo arranca el desarrollo y cuántos desarrolladores tienes. Cada desarrollador aporta 4 horas al día, es decir, 1 punto de historia por día.' },
+    { el: ['fHolgura'], t: 'Holgura', x: 'Si quieres extender el proyecto, agrega semanas de holgura. 1 semana = 5 días hábiles; se reparten por igual entre las historias y cada una los recibe justo después de terminar.' },
+    { el: ['fFestivos', 'fNoLaborales'], t: 'Calendario', x: 'Se trabaja de lunes a viernes. Puedes excluir los festivos de Colombia y agregar otros días no laborables, como vacaciones colectivas, una fecha o un rango por línea.' },
+    { el: ['tblHus'], t: 'Historias de usuario', x: 'Cada historia lleva código, nombre, puntos y dependencias. Si una depende de otra, arranca el mismo día en que termina su predecesora (flujo continuo). Para este recorrido cargamos un proyecto de ejemplo.' },
+    { el: ['barHus'], t: 'Cargar tus historias', x: 'Agrégalas una a una, pégalas desde Excel (Código, Nombre, Puntos, Dependencias) o abre un Excel. Si abres un Excel exportado por esta herramienta, se recupera el proyecto completo.' },
+    { el: ['pnlResultado'], t: 'Resultado al instante', x: 'Cada cambio recalcula el cronograma: inicio, fin, días hábiles, holgura y avisos si algo no cuadra.' },
+    { el: ['btnExport'], t: 'Descargar Excel', x: 'Genera el cronograma en Excel para compartirlo. Guárdalo: con «Abrir Excel» puedes retomarlo o ajustarlo después.' },
+    { el: ['pnlGantt'], t: 'Línea de tiempo', x: 'Mira el avance por historia o por desarrollador. Las barras rayadas con «H» son días de holgura.' },
+    { el: ['pnlSched'], t: 'Cronograma diario', x: 'El detalle día por día: horas de cada desarrollador, historia en curso y puntos restantes. Los festivos aparecen como días sin trabajo.' },
+    { t: '¡Listo!', x: 'Puedes repetir este recorrido cuando quieras con el botón «Tutorial».', fin: true }
+  ];
+  var tour = { i: 0, antes: null };
+
+  function abrirTour() {
+    tour.i = 0; tour.antes = null;
+    if (!tieneHus(state)) {
+      tour.antes = JSON.parse(JSON.stringify(state));
+      state = ejemplo(); pintarParametros(); pintarHus(); calcular();
+    }
+    $('tour').hidden = false;
+    document.addEventListener('keydown', teclaTour);
+    window.addEventListener('resize', ubicarTour);
+    window.addEventListener('scroll', ubicarTour, true);
+    mostrarPaso();
+  }
+  // conservar: true deja el ejemplo; false vuelve al estado anterior (en blanco la primera vez)
+  function cerrarTour(conservar) {
+    $('tour').hidden = true;
+    document.removeEventListener('keydown', teclaTour);
+    window.removeEventListener('resize', ubicarTour);
+    window.removeEventListener('scroll', ubicarTour, true);
+    try { localStorage.setItem(CLAVE_TOUR, 'visto'); } catch (e) { /* ignorado */ }
+    if (tour.antes && !conservar) state = tour.antes;
+    tour.antes = null;
+    pintarParametros(); pintarHus(); cambio();
+    window.scrollTo(0, 0);
+  }
+  function mostrarPaso() {
+    var p = PASOS[tour.i], conEjemplo = p.fin && tour.antes;
+    $('tourTitulo').textContent = p.t;
+    $('tourTexto').textContent = p.x + (conEjemplo ? ' ¿Quieres empezar tu proyecto en blanco o seguir explorando con el ejemplo?' : '');
+    $('tourPaso').textContent = (tour.i + 1) + ' de ' + PASOS.length;
+    $('tourSaltar').hidden = !!p.fin;
+    $('tourAnt').hidden = tour.i === 0 || (p.fin && !conEjemplo);
+    $('tourAnt').textContent = conEjemplo ? 'Empezar en blanco' : 'Anterior';
+    $('tourSig').textContent = tour.i === 0 ? 'Empezar' : conEjemplo ? 'Quedarme con el ejemplo' : p.fin ? 'Terminar' : 'Siguiente';
+    if (p.el) $(p.el[0]).scrollIntoView({ block: 'center', behavior: 'smooth' });
+    ubicarTour();
+    setTimeout(ubicarTour, 350);
+    $('tourSig').focus();
+  }
+  function ubicarTour() {
+    var p = PASOS[tour.i], spot = $('tourSpot'), card = $('tourCard');
+    var vw = window.innerWidth, vh = window.innerHeight, ch = card.offsetHeight, cw = card.offsetWidth;
+    if (!p.el) {
+      spot.className = 'centro'; spot.removeAttribute('style');
+      card.style.left = Math.max(16, (vw - cw) / 2) + 'px'; card.style.top = Math.max(16, (vh - ch) / 2) + 'px';
+      return;
+    }
+    var r = p.el.map(function (id) { return $(id).getBoundingClientRect(); }).reduce(function (a, b) {
+      return { left: Math.min(a.left, b.left), top: Math.min(a.top, b.top), right: Math.max(a.right, b.right), bottom: Math.max(a.bottom, b.bottom) };
+    });
+    var m = 6;
+    spot.className = '';
+    spot.style.left = (r.left - m) + 'px'; spot.style.top = (r.top - m) + 'px';
+    spot.style.width = (r.right - r.left + 2 * m) + 'px'; spot.style.height = (r.bottom - r.top + 2 * m) + 'px';
+    var abajo = r.bottom + m + 10, arriba = r.top - m - 10 - ch;
+    card.style.top = (abajo + ch <= vh - 16 ? abajo : arriba >= 16 ? arriba : vh - ch - 16) + 'px';
+    card.style.left = Math.min(Math.max(16, r.left), vw - cw - 16) + 'px';
+  }
+  function teclaTour(e) {
+    if (e.key === 'Escape') cerrarTour(false);
+    else if (e.key === 'ArrowRight' && !PASOS[tour.i].fin) $('tourSig').click();
+    else if (e.key === 'ArrowLeft' && tour.i > 0 && !PASOS[tour.i].fin) $('tourAnt').click();
+  }
+  $('tourSig').addEventListener('click', function () {
+    if (PASOS[tour.i].fin) cerrarTour(true); else { tour.i++; mostrarPaso(); }
+  });
+  $('tourAnt').addEventListener('click', function () {
+    if (PASOS[tour.i].fin) cerrarTour(false); else { tour.i--; mostrarPaso(); }
+  });
+  $('tourSaltar').addEventListener('click', function () { cerrarTour(false); });
+  $('btnTour').addEventListener('click', abrirTour);
+
   pintarParametros(); pintarHus(); calcular();
+  var tourVisto = false;
+  try { tourVisto = !!localStorage.getItem(CLAVE_TOUR); } catch (e) { /* sin almacenamiento */ }
+  if (!tourVisto) abrirTour();
 })();
 </script>
 </body>
