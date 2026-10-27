@@ -143,7 +143,7 @@
         <button id="btnPaste">Pegar desde Excel</button>
         <button id="btnImport" title="Abre un Excel exportado por esta herramienta (recupera todo el proyecto) o cualquier Excel con columnas Código y Puntos de historia (sólo las historias)">Abrir Excel</button>
         <input id="fileImport" type="file" accept=".xlsx" hidden>
-        <button id="btnReset" title="Vuelve al ejemplo del Excel de referencia">Restablecer ejemplo</button>
+        <button id="btnReset" title="Reemplaza los datos actuales por el proyecto de ejemplo">Restablecer ejemplo</button>
       </div>
     </div>
   </section>
@@ -475,12 +475,12 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     proyecto: 'Proyecto de ejemplo',
     devs: 2, holguraSemanas: 0, festivosCO: true, noLaborales: '',
     hus: [
-      { codigo: 'HU01', nombre: 'Cargar programación', puntos: 5, deps: 'No' },
-      { codigo: 'HU02', nombre: 'Modificar programación', puntos: 5, deps: 'HU01' },
-      { codigo: 'HU03', nombre: 'Editar holgura', puntos: 2, deps: 'No' },
-      { codigo: 'HU04', nombre: 'Cargar ejecución de tareas', puntos: 15, deps: 'HU01, HU02 y HU03' },
-      { codigo: 'HU05', nombre: 'Elegir ejecución', puntos: 10, deps: 'HU04' },
-      { codigo: 'HU06', nombre: 'Cálculo de horas extras y recargos', puntos: 10, deps: 'HU05' }
+      { codigo: 'HU01', nombre: 'Ejemplo: registro de usuarios', puntos: 5, deps: 'No' },
+      { codigo: 'HU02', nombre: 'Ejemplo: inicio de sesión', puntos: 5, deps: 'HU01' },
+      { codigo: 'HU03', nombre: 'Ejemplo: catálogo de servicios', puntos: 2, deps: 'No' },
+      { codigo: 'HU04', nombre: 'Ejemplo: crear y enviar solicitudes', puntos: 15, deps: 'HU01, HU02 y HU03' },
+      { codigo: 'HU05', nombre: 'Ejemplo: aprobar solicitudes', puntos: 10, deps: 'HU04' },
+      { codigo: 'HU06', nombre: 'Ejemplo: reporte de solicitudes', puntos: 10, deps: 'HU05' }
     ]
   };
 
