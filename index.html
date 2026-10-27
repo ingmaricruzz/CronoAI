@@ -1,0 +1,907 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CronoAI · Cronograma</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --text: #1d2330;
+    --muted: #5f6b7d;
+    --border: #dde1e8;
+    --accent: #1f4e79;
+    --accent-soft: #e6eef7;
+    --warn-bg: #fff6e0;
+    --warn-text: #7a5300;
+    --err-bg: #fde8e8;
+    --err-text: #9b1c1c;
+    --skip-bg: #f0f1f4;
+    --week: #b9c2d0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  header { padding: 18px 24px 6px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+  main { display: grid; grid-template-columns: minmax(340px, 540px) 1fr; gap: 16px; padding: 12px 24px 32px; align-items: start; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; padding: 12px 16px 24px; } header { padding: 16px 16px 4px; } }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; min-width: 0; }
+  .panel + .panel { margin-top: 16px; }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { margin-bottom: 12px; }
+  input, select, textarea { width: 100%; font: inherit; color: var(--text); background: var(--panel);
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+  textarea { resize: vertical; min-height: 60px; font-family: Consolas, monospace; font-size: 12px; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text); }
+  .check input { width: auto; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  button { font: inherit; cursor: pointer; border-radius: 6px; padding: 6px 12px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--text); }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.icon { padding: 2px 8px; color: var(--muted); }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border-bottom: 1px solid var(--border); padding: 5px 6px; text-align: left; vertical-align: middle; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--panel); }
+  .hu-table td { padding: 3px 3px; }
+  .hu-table input { padding: 4px 6px; }
+  .hu-table .pts { width: 64px; }
+  .hu-table .cod { width: 74px; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .msgs div { padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
+  .msgs .warn { background: var(--warn-bg); color: var(--warn-text); }
+  .msgs .err { background: var(--err-bg); color: var(--err-text); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .card { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .card .k { font-size: 12px; color: var(--muted); }
+  .card .v { font-size: 20px; font-weight: 600; margin-top: 2px; }
+  .card .s { font-size: 12px; color: var(--muted); }
+  .scroll { overflow-x: auto; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+  .tabs button.on { background: var(--accent-soft); border-color: var(--accent); }
+  .gantt { border-collapse: separate; border-spacing: 0; width: auto; font-size: 11px; }
+  .gantt th, .gantt td { border-bottom: none; padding: 0; }
+  .gantt .lbl { position: sticky; left: 0; background: var(--panel); padding: 2px 10px 2px 0; white-space: nowrap; z-index: 1; font-size: 12px; }
+  .gantt .day { width: 24px; min-width: 24px; text-align: center; color: var(--muted); font-weight: 400; }
+  .gantt .mon { text-align: left; color: var(--text); font-weight: 600; padding-left: 2px; border-left: 1px solid var(--week); }
+  .gantt td.c { height: 22px; border-left: 1px solid transparent; }
+  .gantt .wk { border-left: 1px solid var(--week) !important; }
+  .gantt .bar { display: block; height: 16px; margin: 3px 1px; border-radius: 3px; color: #fff; text-align: center; line-height: 16px; font-size: 10px; font-weight: 600; }
+  .gantt .bar.hol { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.45) 0 3px, transparent 3px 7px); opacity: .75; }
+  .sched tr.hol td { background: var(--accent-soft); }
+  .sched tr.skip td { background: var(--skip-bg); color: var(--muted); font-style: italic; }
+  .sched tr.wk td { border-top: 2px solid var(--week); }
+  .sched td { white-space: nowrap; }
+  .sched td.hu { white-space: normal; min-width: 180px; }
+  .sched tfoot td { font-weight: 600; border-top: 2px solid var(--border); }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+  dialog { border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); width: min(640px, 92vw); }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  dialog textarea { min-height: 200px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>CronoAI · Generador de cronograma</h1>
+  <p>1 punto de historia = 4 horas = dedicación diaria máxima de un desarrollador. Lunes a viernes, sin festivos.</p>
+</header>
+
+<main>
+  <section>
+    <div class="panel">
+      <h2>Parámetros</h2>
+      <div class="field">
+        <label for="proyecto">Proyecto</label>
+        <input id="proyecto" placeholder="Nombre del proyecto">
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label for="inicio">Fecha de inicio</label>
+          <input id="inicio" type="date">
+        </div>
+        <div class="field">
+          <label for="devs">Número de desarrolladores</label>
+          <input id="devs" type="number" min="1" max="50" step="1">
+        </div>
+      </div>
+      <div class="field">
+        <label for="holguraSemanas">Holgura (semanas)</label>
+        <input id="holguraSemanas" type="number" min="0" step="0.2" inputmode="decimal" placeholder="0">
+        <div class="hint">1 semana = 5 días hábiles (lunes a viernes; los festivos y días no laborables no cuentan). Los días se reparten por igual entre las HU y cada HU los recibe justo después de terminar.</div>
+      </div>
+      <div class="field">
+        <label class="check"><input id="festivosCO" type="checkbox"> Excluir festivos de Colombia (Ley Emiliani, calculados para cualquier año)</label>
+      </div>
+      <div class="field">
+        <label for="noLaborales">Otros días no laborables (vacaciones colectivas, días de la empresa…)</label>
+        <textarea id="noLaborales" placeholder="Una fecha o rango por línea, p. ej.:&#10;2026-12-24&#10;24/12/2026&#10;2026-12-28 a 2027-01-08"></textarea>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Historias de usuario</h2>
+      <div class="scroll">
+        <table class="hu-table">
+          <thead><tr><th>Código</th><th>Nombre</th><th>Puntos</th><th>Dependencias</th><th></th></tr></thead>
+          <tbody id="huBody"></tbody>
+          <tfoot><tr><td></td><td class="num"><b>Total</b></td><td class="num" id="huTotal"></td><td colspan="2"></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="hint">Dependencias: códigos separados por coma o «y» (p. ej. «HU01, HU02 y HU03»), o «No». Flujo continuo: la HU dependiente arranca el mismo día en que se termina su predecesora (p. ej. «HU01 (Dev.1) / HU02 (Dev.2)»).</div>
+      <div class="toolbar">
+        <button id="btnAdd">+ Agregar HU</button>
+        <button id="btnPaste">Pegar desde Excel</button>
+        <button id="btnImport" title="Abre un Excel exportado por esta herramienta (recupera todo el proyecto) o cualquier Excel con columnas Código y Puntos de historia (sólo las historias)">Abrir Excel</button>
+        <input id="fileImport" type="file" accept=".xlsx" hidden>
+        <button id="btnReset" title="Vuelve al ejemplo del Excel de referencia">Restablecer ejemplo</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="panel">
+      <div class="msgs" id="msgs"></div>
+      <div class="cards" id="cards"></div>
+      <div class="toolbar">
+        <button class="primary" id="btnExport">Descargar Excel</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Línea de tiempo</h2>
+      <div class="tabs">
+        <button data-view="hu" class="on">Por historia</button>
+        <button data-view="dev">Por desarrollador</button>
+      </div>
+      <div class="scroll" id="gantt"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Cronograma diario</h2>
+      <div class="scroll"><table class="sched" id="sched"></table></div>
+    </div>
+
+    <div class="panel">
+      <h2>Resumen por historia</h2>
+      <div class="scroll"><table id="huSummary"></table></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlgPaste">
+  <h2>Pegar historias desde Excel</h2>
+  <p class="hint">Copia en Excel las columnas <b>Código, Nombre, Puntos de historia, Dependencias</b> (con o sin encabezado) y pégalas aquí. Reemplaza la lista actual.</p>
+  <textarea id="pasteArea"></textarea>
+  <div class="toolbar">
+    <button class="primary" id="pasteOk">Cargar</button>
+    <button id="pasteCancel">Cancelar</button>
+  </div>
+</dialog>
+
+<!-- Motor de cálculo: sin dependencias del DOM para poder probarlo aparte -->
+<script id="engine">
+var CronoEngine = (function () {
+  var HORAS_POR_PUNTO = 4;
+  var EPS = 1e-9;
+  var DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+  function r2(x) { return Math.round(x * 100) / 100; }
+  function redondeoMitadAbajo(x) { x = r2(x); var e = Math.floor(x); return x - e > 0.5 ? e + 1 : e; }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function ymd(d) { return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); }
+  function utc(y, m, d) { return new Date(Date.UTC(y, m - 1, d)); }
+  function addDays(d, n) { return new Date(d.getTime() + n * 86400000); }
+
+  function parseFecha(s) {
+    s = String(s || '').trim();
+    var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) return valida(+m[1], +m[2], +m[3]);
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return valida(+m[3], +m[2], +m[1]);
+    return null;
+  }
+  function valida(y, mo, d) {
+    var f = utc(y, mo, d);
+    return f.getUTCMonth() === mo - 1 && f.getUTCDate() === d ? f : null;
+  }
+  function fmt(d) { return pad(d.getUTCDate()) + '/' + pad(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(); }
+
+  // Domingo de Pascua (algoritmo de Meeus/Jones/Butcher, calendario gregoriano)
+  function pascua(y) {
+    var a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4,
+        f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
+        h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4,
+        l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451),
+        mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1;
+    return utc(y, mes, dia);
+  }
+  function lunesSiguiente(d) { var dow = d.getUTCDay(); return dow === 1 ? d : addDays(d, (8 - dow) % 7); }
+
+  var cacheFestivos = {};
+  function festivosColombia(y) {
+    if (cacheFestivos[y]) return cacheFestivos[y];
+    var p = pascua(y), L = lunesSiguiente;
+    var lista = [
+      [utc(y, 1, 1), 'Año Nuevo'],
+      [L(utc(y, 1, 6)), 'Día de los Reyes Magos'],
+      [L(utc(y, 3, 19)), 'Día de San José'],
+      [addDays(p, -3), 'Jueves Santo'],
+      [addDays(p, -2), 'Viernes Santo'],
+      [utc(y, 5, 1), 'Día del Trabajo'],
+      [addDays(p, 43), 'Ascensión del Señor'],
+      [addDays(p, 64), 'Corpus Christi'],
+      [addDays(p, 71), 'Sagrado Corazón de Jesús'],
+      [L(utc(y, 6, 29)), 'San Pedro y San Pablo'],
+      [utc(y, 7, 20), 'Día de la Independencia'],
+      [utc(y, 8, 7), 'Batalla de Boyacá'],
+      [L(utc(y, 8, 15)), 'Asunción de la Virgen'],
+      [L(utc(y, 10, 12)), 'Día de la Raza'],
+      [L(utc(y, 11, 1)), 'Todos los Santos'],
+      [L(utc(y, 11, 11)), 'Independencia de Cartagena'],
+      [utc(y, 12, 8), 'Inmaculada Concepción'],
+      [utc(y, 12, 25), 'Navidad']
+    ].map(function (x) { return { fecha: ymd(x[0]), nombre: x[1] }; });
+    lista.sort(function (a, b) { return a.fecha < b.fecha ? -1 : 1; });
+    return (cacheFestivos[y] = lista);
+  }
+
+  // Líneas: "2026-12-24", "24/12/2026" o rangos "2026-12-28 a 2027-01-08" (también "..", " - " o "al")
+  function parseNoLaborales(texto) {
+    var dias = {}, errores = [];
+    String(texto || '').split(/\r?\n/).forEach(function (linea, i) {
+      var t = linea.replace(/#.*/, '').trim();
+      if (!t) return;
+      var partes = t.split(/\s*(?:\.\.|\s-\s|\bal?\b)\s*/i).filter(Boolean);
+      var a = parseFecha(partes[0]), b = partes[1] ? parseFecha(partes[1]) : a;
+      if (!a || !b || partes.length > 2 || b < a) { errores.push('Línea ' + (i + 1) + ' de días no laborables no reconocida: «' + t + '»'); return; }
+      for (var d = a; d <= b; d = addDays(d, 1)) dias[ymd(d)] = 'No laborable';
+    });
+    return { dias: dias, errores: errores };
+  }
+
+  function parseDeps(s) {
+    s = String(s == null ? '' : s).trim();
+    if (/^(no|ninguna?|n\/a|-|—)?$/i.test(s)) return [];
+    return s.split(/\s*(?:,|;|&|\/|\by\b|\be\b|\s)\s*/i).map(function (x) { return x.trim(); }).filter(Boolean);
+  }
+
+  function generar(p) {
+    var advertencias = [], errores = [];
+    var devs = Math.floor(Number(p.devs));
+    if (!(devs >= 1)) errores.push('El número de desarrolladores debe ser un entero mayor o igual a 1.');
+    var inicio = parseFecha(p.inicio);
+    if (!inicio) errores.push('Indica una fecha de inicio válida.');
+    var semanasTxt = String(p.holguraSemanas == null ? '' : p.holguraSemanas).trim().replace(',', '.');
+    var semanas = semanasTxt ? Number(semanasTxt) : 0;
+    if (!(semanas >= 0)) errores.push('La holgura debe ser un número de semanas mayor o igual a 0.');
+
+    var hus = [], porCodigo = {};
+    (p.hus || []).forEach(function (h, i) {
+      var codigo = String(h.codigo == null ? '' : h.codigo).trim();
+      var nombre = String(h.nombre == null ? '' : h.nombre).trim();
+      var ptsTxt = String(h.puntos == null ? '' : h.puntos).trim().replace(',', '.');
+      if (!codigo && !nombre && !ptsTxt) return;
+      var fila = 'Fila ' + (i + 1);
+      if (!codigo) { errores.push(fila + ': falta el código de la HU.'); return; }
+      if (porCodigo[codigo]) { errores.push('El código ' + codigo + ' está repetido.'); return; }
+      var pts = Number(ptsTxt);
+      if (!(pts > 0)) { errores.push(codigo + ': los puntos de historia deben ser un número mayor que 0.'); return; }
+      var hu = { codigo: codigo, nombre: nombre, puntos: r2(pts), depsTexto: h.deps, deps: [], orden: hus.length };
+      hus.push(hu); porCodigo[codigo] = hu;
+    });
+    if (!hus.length) errores.push('Agrega al menos una historia de usuario.');
+
+    hus.forEach(function (hu) {
+      parseDeps(hu.depsTexto).forEach(function (d) {
+        if (d === hu.codigo) advertencias.push(hu.codigo + ' figura como dependencia de sí misma; se ignora.');
+        else if (!porCodigo[d]) advertencias.push(hu.codigo + ' depende de «' + d + '», que no está en la lista; se ignora.');
+        else if (hu.deps.indexOf(d) < 0) hu.deps.push(d);
+      });
+    });
+
+    // Orden topológico estable: respeta el orden de la lista salvo que una dependencia obligue a otra cosa
+    var orden = [], hecho = {}, pendientes = hus.slice();
+    while (pendientes.length) {
+      var idx = -1;
+      for (var i = 0; i < pendientes.length; i++) {
+        if (pendientes[i].deps.every(function (d) { return hecho[d]; })) { idx = i; break; }
+      }
+      if (idx < 0) {
+        errores.push('Hay dependencias circulares entre: ' + pendientes.map(function (h) { return h.codigo; }).join(', ') + '.');
+        break;
+      }
+      var sig = pendientes.splice(idx, 1)[0];
+      hecho[sig.codigo] = true; orden.push(sig.codigo);
+    }
+    hus.forEach(function (hu) {
+      if (orden.indexOf(hu.codigo) > hu.orden && hus.some(function (o) { return hu.deps.indexOf(o.codigo) >= 0 && o.orden > hu.orden; }))
+        advertencias.push(hu.codigo + ' se programa después de sus dependencias aunque esté antes en la lista.');
+    });
+
+    var noLab = parseNoLaborales(p.noLaborales);
+    errores = errores.concat(noLab.errores);
+    if (errores.length) return { errores: errores, advertencias: advertencias };
+
+    function motivoNoLaboral(d) {
+      var dow = d.getUTCDay();
+      if (dow === 0 || dow === 6) return 'fin de semana';
+      var k = ymd(d);
+      if (p.festivosCO) {
+        var f = festivosColombia(d.getUTCFullYear()).filter(function (x) { return x.fecha === k; })[0];
+        if (f) return 'Festivo: ' + f.nombre;
+      }
+      if (noLab.dias[k]) return 'Día no laborable';
+      return null;
+    }
+
+    var restante = {}, total = 0;
+    hus.forEach(function (h) { restante[h.codigo] = h.puntos; total = r2(total + h.puntos); });
+    var pendienteTotal = total;
+
+    // Holgura: 1 semana = 5 días hábiles, repartidos por igual entre las HU (el sobrante, a las primeras en orden de desarrollo).
+    // Los días de holgura de cada HU se programan justo después de que termina; festivos y fines de semana no cuentan.
+    var diasHolgura = Math.round(semanas * 5), holguraHu = {};
+    orden.forEach(function (c, i) {
+      holguraHu[c] = Math.floor(diasHolgura / orden.length) + (i < diasHolgura % orden.length ? 1 : 0);
+      porCodigo[c].diasHolgura = 0;
+    });
+    var colaHolgura = [];
+    var ultimaHu = new Array(devs).fill(null);
+    var dias = [], saltados = [], d = inicio, guard = 0;
+
+    while (pendienteTotal > EPS || colaHolgura.length) {
+      if (++guard > 50000) { return { errores: ['El cronograma supera 50.000 días; revisa los datos.'], advertencias: advertencias }; }
+      var motivo = motivoNoLaboral(d);
+      if (motivo) {
+        if (motivo !== 'fin de semana') saltados.push({ fecha: ymd(d), motivo: motivo });
+        d = addDays(d, 1); continue;
+      }
+      if (colaHolgura.length) {
+        var ch = colaHolgura[0], huH = porCodigo[ch];
+        huH.diasHolgura++; huH.fin = ymd(d);
+        if (huH.diasHolgura >= holguraHu[ch]) colaHolgura.shift();
+        dias.push({
+          fecha: ymd(d), dia: DIAS[d.getUTCDay()], holgura: ch,
+          asignacion: new Array(devs).fill(0).map(function () { return [{ hu: ch, puntos: 0 }]; }),
+          horas: new Array(devs).fill(HORAS_POR_PUNTO), puntos: 0, restante: pendienteTotal
+        });
+        d = addDays(d, 1); continue;
+      }
+      var hoy = {};
+      var libre = function (c) { return r2(restante[c] - (hoy[c] || 0)); };
+      var disponible = function (c) {
+        if (libre(c) <= EPS) return false;
+        return porCodigo[c].deps.every(function (dep) {
+          return libre(dep) <= EPS;
+        });
+      };
+      var asign = [];
+      // Último día de la última HU: las horas que quedan se reparten por igual entre todos los desarrolladores,
+      // redondeando hacia abajo si la fracción es <= 0,5 y hacia arriba si es > 0,5
+      var quedan = orden.filter(function (c) { return restante[c] > EPS; });
+      if (quedan.length === 1 && restante[quedan[0]] < devs - EPS) {
+        var horasDev = redondeoMitadAbajo(restante[quedan[0]] * HORAS_POR_PUNTO / devs);
+        if (horasDev > 0) {
+          hoy[quedan[0]] = restante[quedan[0]];
+          for (var j = 0; j < devs; j++) asign.push([{ hu: quedan[0], puntos: horasDev / HORAS_POR_PUNTO }]);
+        }
+      }
+      for (var k = asign.length ? devs : 0; k < devs; k++) {
+        var cap = 1, trabajo = [];
+        while (cap > EPS) {
+          var c = ultimaHu[k] && disponible(ultimaHu[k]) ? ultimaHu[k] : orden.filter(disponible)[0];
+          if (!c) break;
+          var cant = r2(Math.min(cap, libre(c)));
+          hoy[c] = r2((hoy[c] || 0) + cant); cap = r2(cap - cant);
+          trabajo.push({ hu: c, puntos: cant });
+          ultimaHu[k] = c;
+        }
+        asign.push(trabajo);
+      }
+      var puntosDia = 0;
+      Object.keys(hoy).forEach(function (c) {
+        var hu = porCodigo[c];
+        if (!hu.inicio) hu.inicio = ymd(d);
+        hu.diasTrabajo = (hu.diasTrabajo || 0) + 1;
+        restante[c] = r2(restante[c] - hoy[c]);
+        if (restante[c] <= EPS) { restante[c] = 0; hu.fin = ymd(d); if (holguraHu[c]) colaHolgura.push(c); }
+        puntosDia = r2(puntosDia + hoy[c]);
+      });
+      if (puntosDia <= EPS) return { errores: ['No fue posible asignar trabajo; revisa las dependencias.'], advertencias: advertencias };
+      pendienteTotal = r2(pendienteTotal - puntosDia);
+      dias.push({
+        fecha: ymd(d), dia: DIAS[d.getUTCDay()], asignacion: asign,
+        horas: asign.map(function (t) { return r2(t.reduce(function (s, x) { return s + x.puntos; }, 0) * HORAS_POR_PUNTO); }),
+        puntos: puntosDia, restante: pendienteTotal
+      });
+      d = addDays(d, 1);
+    }
+
+    if (saltados.length && saltados[saltados.length - 1].fecha > dias[dias.length - 1].fecha) saltados.pop();
+    var primerDia = dias[0].fecha;
+    if (primerDia !== ymd(inicio))
+      advertencias.push('La fecha de inicio (' + fmt(inicio) + ') no es día hábil; el cronograma arranca el ' + fmt(parseFecha(primerDia)) + '.');
+
+    return {
+      errores: [], advertencias: advertencias, dias: dias, saltados: saltados, devs: devs, total: total,
+      holguraSemanas: semanas, diasHolgura: diasHolgura,
+      horasPorPunto: HORAS_POR_PUNTO, orden: orden,
+      hus: hus.map(function (h) {
+        return { codigo: h.codigo, nombre: h.nombre, puntos: h.puntos, deps: h.deps, inicio: h.inicio, fin: h.fin, diasTrabajo: h.diasTrabajo, diasHolgura: h.diasHolgura };
+      })
+    };
+  }
+
+  // Texto de la columna HU, con el mismo formato del Excel: "HU01" o "HU01 (Dev.1) / HU02 (Dev.2)"
+  function etiquetaDia(dia) {
+    if (dia.holgura) return dia.holgura + ' (holgura)';
+    var grupos = [], porEtiqueta = {};
+    dia.asignacion.forEach(function (t, k) {
+      var et = t.length ? t.map(function (x) { return x.hu; }).join(' + ') : 'Sin asignación';
+      if (!porEtiqueta[et]) { porEtiqueta[et] = []; grupos.push(et); }
+      porEtiqueta[et].push('Dev.' + (k + 1));
+    });
+    if (grupos.length === 1 && grupos[0] !== 'Sin asignación') return grupos[0];
+    return grupos.map(function (g) { return g + ' (' + porEtiqueta[g].join(', ') + ')'; }).join(' / ');
+  }
+
+  return {
+    generar: generar, festivosColombia: festivosColombia, parseDeps: parseDeps, parseFecha: parseFecha,
+    etiquetaDia: etiquetaDia, fmt: fmt, ymd: ymd, HORAS_POR_PUNTO: HORAS_POR_PUNTO, DIAS: DIAS
+  };
+})();
+if (typeof module !== 'undefined') module.exports = CronoEngine;
+</script>
+
+<script>
+(function () {
+  var E = CronoEngine;
+  var CLAVE = 'cronoAI.v1';
+  // Hoja oculta del Excel exportado con los datos del proyecto, para poder volver a abrirlo en la herramienta
+  var HOJA_DATOS = 'Datos cronoAI', VERSION_DATOS = 1;
+  var PARAMETROS = ['proyecto', 'inicio', 'devs', 'holguraSemanas', 'festivosCO', 'noLaborales'];
+  var EJEMPLO = {
+    proyecto: 'Proyecto de ejemplo',
+    devs: 2, holguraSemanas: 0, festivosCO: true, noLaborales: '',
+    hus: [
+      { codigo: 'HU01', nombre: 'Cargar programación', puntos: 5, deps: 'No' },
+      { codigo: 'HU02', nombre: 'Modificar programación', puntos: 5, deps: 'HU01' },
+      { codigo: 'HU03', nombre: 'Editar holgura', puntos: 2, deps: 'No' },
+      { codigo: 'HU04', nombre: 'Cargar ejecución de tareas', puntos: 15, deps: 'HU01, HU02 y HU03' },
+      { codigo: 'HU05', nombre: 'Elegir ejecución', puntos: 10, deps: 'HU04' },
+      { codigo: 'HU06', nombre: 'Cálculo de horas extras y recargos', puntos: 10, deps: 'HU05' }
+    ]
+  };
+
+  var state = cargar();
+  var resultado = null;
+  var vista = 'hu';
+  var $ = function (id) { return document.getElementById(id); };
+
+  function cargar() {
+    try {
+      var s = JSON.parse(localStorage.getItem(CLAVE));
+      if (s && Array.isArray(s.hus)) return s;
+    } catch (e) { /* sin almacenamiento disponible */ }
+    return ejemplo();
+  }
+  // El ejemplo arranca en la fecha de hoy (hora local del equipo)
+  function ejemplo() {
+    var e = JSON.parse(JSON.stringify(EJEMPLO)), h = new Date();
+    e.inicio = h.getFullYear() + '-' + ('0' + (h.getMonth() + 1)).slice(-2) + '-' + ('0' + h.getDate()).slice(-2);
+    return e;
+  }
+  function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(state)); } catch (e) { /* ignorado */ } }
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function fmtF(s) { return s ? E.fmt(E.parseFecha(s)) : '—'; }
+  function n(x) { return String(Math.round(x * 100) / 100).replace('.', ','); }
+  function colorHu(i) { return 'hsl(' + ((i * 137.5 + 205) % 360) + ' 55% 45%)'; }
+
+  // ---------- Parámetros ----------
+  function pintarParametros() {
+    $('proyecto').value = state.proyecto || '';
+    $('inicio').value = state.inicio || '';
+    $('devs').value = state.devs;
+    $('holguraSemanas').value = state.holguraSemanas || '';
+    $('festivosCO').checked = state.festivosCO !== false;
+    $('noLaborales').value = state.noLaborales || '';
+  }
+  ['proyecto', 'inicio', 'devs', 'holguraSemanas', 'noLaborales'].forEach(function (id) {
+    $(id).addEventListener('input', function () { state[id] = $(id).value; cambio(); });
+  });
+  $('festivosCO').addEventListener('change', function () { state.festivosCO = $('festivosCO').checked; cambio(); });
+
+  // ---------- Tabla de HU ----------
+  function pintarHus() {
+    $('huBody').innerHTML = state.hus.map(function (h, i) {
+      return '<tr data-i="' + i + '">' +
+        '<td><input class="cod" data-f="codigo" value="' + esc(h.codigo) + '"></td>' +
+        '<td><input data-f="nombre" value="' + esc(h.nombre) + '"></td>' +
+        '<td><input class="pts num" data-f="puntos" inputmode="decimal" value="' + esc(h.puntos) + '"></td>' +
+        '<td><input data-f="deps" value="' + esc(h.deps) + '"></td>' +
+        '<td><button class="icon" data-del="' + i + '" title="Eliminar">✕</button></td></tr>';
+    }).join('');
+  }
+  $('huBody').addEventListener('input', function (e) {
+    var f = e.target.getAttribute('data-f'); if (!f) return;
+    state.hus[+e.target.closest('tr').getAttribute('data-i')][f] = e.target.value;
+    cambio();
+  });
+  $('huBody').addEventListener('click', function (e) {
+    var i = e.target.getAttribute('data-del'); if (i == null) return;
+    state.hus.splice(+i, 1); pintarHus(); cambio();
+  });
+  $('btnAdd').addEventListener('click', function () {
+    var num = state.hus.length + 1;
+    state.hus.push({ codigo: 'HU' + (num < 10 ? '0' : '') + num, nombre: '', puntos: '', deps: 'No' });
+    pintarHus(); cambio();
+    var inputs = $('huBody').querySelectorAll('tr:last-child input'); if (inputs[1]) inputs[1].focus();
+  });
+  $('btnReset').addEventListener('click', function () {
+    if (!confirm('¿Reemplazar los datos actuales por el ejemplo?')) return;
+    state = ejemplo(); pintarParametros(); pintarHus(); cambio();
+  });
+
+  // Pegar desde Excel (texto separado por tabulaciones)
+  $('btnPaste').addEventListener('click', function () { $('pasteArea').value = ''; $('dlgPaste').showModal(); });
+  $('pasteCancel').addEventListener('click', function () { $('dlgPaste').close(); });
+  $('pasteOk').addEventListener('click', function () {
+    var filas = $('pasteArea').value.split(/\r?\n/).map(function (l) { return l.split('\t'); })
+      .filter(function (c) { return c.join('').trim(); });
+    cargarFilas(filas);
+    $('dlgPaste').close();
+  });
+
+  function cargarFilas(filas) {
+    if (filas.length && /c[oó]digo/i.test(filas[0][0] || '')) filas = filas.slice(1);
+    var hus = filas.filter(function (c) { return String(c[0] || '').trim() && !/^total$/i.test(String(c[0]).trim()); })
+      .map(function (c) { return { codigo: String(c[0]).trim(), nombre: String(c[1] || '').trim(), puntos: String(c[2] == null ? '' : c[2]).trim(), deps: String(c[3] == null ? '' : c[3]).trim() || 'No' }; });
+    if (!hus.length) { alert('No se encontraron historias de usuario en los datos.'); return; }
+    state.hus = hus; pintarHus(); cambio();
+  }
+
+  // Importar .xlsx: busca la hoja con encabezados Código / Puntos
+  $('btnImport').addEventListener('click', function () { $('fileImport').click(); });
+  $('fileImport').addEventListener('change', function () {
+    var file = this.files[0]; this.value = '';
+    if (!file) return;
+    if (typeof ExcelJS === 'undefined') { alert('No se pudo cargar la librería de Excel (requiere conexión a internet). Usa «Pegar desde Excel».'); return; }
+    file.arrayBuffer().then(function (buf) {
+      var wb = new ExcelJS.Workbook();
+      return wb.xlsx.load(buf).then(function () {
+        var valor = function (cell) {
+          var v = cell.value;
+          if (v && typeof v === 'object') v = v.result !== undefined ? v.result : v.richText ? v.richText.map(function (t) { return t.text; }).join('') : v.text;
+          return v == null ? '' : v;
+        };
+        var datos = wb.getWorksheet(HOJA_DATOS);
+        if (datos && valor(datos.getCell('A1')) === 'cronoAI') { abrirProyecto(datos, valor); return; }
+        for (var s = 0; s < wb.worksheets.length; s++) {
+          var ws = wb.worksheets[s];
+          for (var r = 1; r <= Math.min(ws.rowCount, 15); r++) {
+            var row = ws.getRow(r), cols = {};
+            row.eachCell(function (cell, col) {
+              var t = String(valor(cell)).toLowerCase();
+              if (/c[oó]digo/.test(t)) cols.codigo = col;
+              else if (/nombre/.test(t)) cols.nombre = col;
+              else if (/punto/.test(t)) cols.puntos = col;
+              else if (/dependen/.test(t)) cols.deps = col;
+            });
+            if (cols.codigo && cols.puntos) {
+              var filas = [];
+              for (var k = r + 1; k <= ws.rowCount; k++) {
+                var rr = ws.getRow(k);
+                filas.push([cols.codigo, cols.nombre, cols.puntos, cols.deps].map(function (c) { return c ? valor(rr.getCell(c)) : ''; }));
+              }
+              cargarFilas(filas);
+              return;
+            }
+          }
+        }
+        alert('No se encontró una hoja con columnas «Código» y «Puntos de historia».');
+      });
+    }).catch(function (err) { alert('No se pudo leer el archivo: ' + err.message); });
+  });
+
+  function abrirProyecto(ws, valor) {
+    var nuevo = { hus: [] }, enHus = false;
+    for (var r = 2; r <= ws.rowCount; r++) {
+      var row = ws.getRow(r), clave = String(valor(row.getCell(1)));
+      if (enHus) {
+        if (clave) nuevo.hus.push({ codigo: clave, nombre: String(valor(row.getCell(2))), puntos: String(valor(row.getCell(3))), deps: String(valor(row.getCell(4))) || 'No' });
+      } else if (clave === 'Código') enHus = true;
+      else if (PARAMETROS.indexOf(clave) >= 0) nuevo[clave] = valor(row.getCell(2));
+    }
+    nuevo.festivosCO = nuevo.festivosCO !== false && String(nuevo.festivosCO).toLowerCase() !== 'false';
+    if (!nuevo.hus.length) { alert('El archivo no trae historias de usuario.'); return; }
+    state = nuevo; pintarParametros(); pintarHus(); cambio();
+  }
+
+  // ---------- Cálculo y resultados ----------
+  var timer = null;
+  function cambio() { guardar(); clearTimeout(timer); timer = setTimeout(calcular, 150); }
+
+  function calcular() {
+    resultado = E.generar(state);
+    var total = state.hus.reduce(function (s, h) { var v = Number(String(h.puntos).replace(',', '.')); return s + (v > 0 ? v : 0); }, 0);
+    $('huTotal').textContent = n(total);
+    $('msgs').innerHTML = resultado.errores.map(function (m) { return '<div class="err">' + esc(m) + '</div>'; }).join('') +
+      resultado.advertencias.map(function (m) { return '<div class="warn">' + esc(m) + '</div>'; }).join('');
+    var ok = !resultado.errores.length;
+    $('btnExport').disabled = !ok;
+    if (!ok) { ['cards', 'gantt', 'legend', 'sched', 'huSummary'].forEach(function (id) { $(id).innerHTML = ''; }); return; }
+    pintarTarjetas(); pintarGantt(); pintarCronograma(); pintarResumenHu();
+  }
+
+  function pintarTarjetas() {
+    var r = resultado, dias = r.dias, festivos = r.saltados.length;
+    var cal = (E.parseFecha(dias[dias.length - 1].fecha) - E.parseFecha(dias[0].fecha)) / 86400000 + 1;
+    $('cards').innerHTML = [
+      ['Inicio', fmtF(dias[0].fecha), dias[0].dia],
+      ['Fin', fmtF(dias[dias.length - 1].fecha), dias[dias.length - 1].dia],
+      ['Días hábiles', dias.length, cal + ' días calendario'],
+      ['Puntos de historia', n(r.total), n(r.total * r.horasPorPunto) + ' horas'],
+      ['Capacidad diaria', r.devs + ' pts', r.devs + ' dev × 4 h = ' + r.devs * 4 + ' h'],
+      ['Holgura', r.diasHolgura + ' días', r.diasHolgura ? n(r.holguraSemanas) + ' semana(s) hábiles' : 'sin holgura'],
+      ['Días no laborables', festivos, festivos ? 'en días de semana' : 'ninguno en el rango']
+    ].map(function (c) { return '<div class="card"><div class="k">' + c[0] + '</div><div class="v">' + c[1] + '</div><div class="s">' + c[2] + '</div></div>'; }).join('');
+  }
+
+  function encabezadoGantt(dias) {
+    var meses = [], prev = null;
+    var MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    dias.forEach(function (d) {
+      var m = d.fecha.slice(0, 7);
+      if (m !== prev) { meses.push({ m: m, n: 0 }); prev = m; }
+      meses[meses.length - 1].n++;
+    });
+    return '<tr><th class="lbl"></th>' + meses.map(function (x) {
+      return '<th class="mon" colspan="' + x.n + '">' + MES[+x.m.slice(5) - 1] + ' ' + x.m.slice(0, 4) + '</th>';
+    }).join('') + '</tr><tr><th class="lbl"></th>' + dias.map(function (d, i) {
+      return '<th class="day' + (esLunes(dias, i) ? ' wk' : '') + '" title="' + d.dia + ' ' + fmtF(d.fecha) + '">' + d.fecha.slice(8) + '<br>' + d.dia[0] + '</th>';
+    }).join('') + '</tr>';
+  }
+  function esLunes(dias, i) { return i > 0 && E.parseFecha(dias[i].fecha).getUTCDay() <= E.parseFecha(dias[i - 1].fecha).getUTCDay(); }
+
+  function pintarGantt() {
+    var r = resultado, dias = r.dias;
+    var color = {}; r.hus.forEach(function (h, i) { color[h.codigo] = colorHu(i); });
+    var filas;
+    if (vista === 'hu') {
+      filas = r.orden.map(function (cod) {
+        return '<tr><td class="lbl">' + esc(cod) + '</td>' + dias.map(function (d, i) {
+          var quien = [], pts = 0;
+          d.asignacion.forEach(function (t, k) { t.forEach(function (x) { if (x.hu === cod) { quien.push('Dev.' + (k + 1)); pts += x.puntos; } }); });
+          var cls = 'c' + (esLunes(dias, i) ? ' wk' : '');
+          if (!quien.length) return '<td class="' + cls + '"></td>';
+          if (d.holgura) return '<td class="' + cls + '"><span class="bar hol" style="background-color:' + color[cod] + '" title="' + esc(cod) + ' · ' + d.dia + ' ' + fmtF(d.fecha) + ' · holgura">H</span></td>';
+          return '<td class="' + cls + '"><span class="bar" style="background:' + color[cod] + '" title="' + esc(cod) + ' · ' + d.dia + ' ' + fmtF(d.fecha) + ' · ' + quien.join(', ') + ' · ' + n(pts) + ' pts">' + n(pts) + '</span></td>';
+        }).join('') + '</tr>';
+      });
+    } else {
+      filas = [];
+      for (var k = 0; k < r.devs; k++) {
+        filas.push('<tr><td class="lbl">Developer ' + (k + 1) + '</td>' + dias.map(function (d, i) {
+          var t = d.asignacion[k], cls = 'c' + (esLunes(dias, i) ? ' wk' : '');
+          if (!t.length) return '<td class="' + cls + '" title="Sin asignación"></td>';
+          var bg = t.length === 1 ? color[t[0].hu] : 'linear-gradient(90deg,' + t.map(function (x) { return color[x.hu]; }).join(',') + ')';
+          var txt = d.holgura ? d.holgura + ' · holgura (4 h)' : t.map(function (x) { return x.hu + ' (' + n(x.puntos * 4) + ' h)'; }).join(' + ');
+          if (d.holgura) return '<td class="' + cls + '"><span class="bar hol" style="background-color:' + bg + '" title="' + esc(d.dia + ' ' + fmtF(d.fecha) + ' · ' + txt) + '">H</span></td>';
+          return '<td class="' + cls + '"><span class="bar" style="background:' + bg + '" title="' + esc(d.dia + ' ' + fmtF(d.fecha) + ' · ' + txt) + '">' + esc(t[0].hu.replace(/^\D+/, '')) + '</span></td>';
+        }).join('') + '</tr>');
+      }
+    }
+    $('gantt').innerHTML = '<table class="gantt">' + encabezadoGantt(dias) + filas.join('') + '</table>';
+    $('legend').innerHTML = r.hus.map(function (h) {
+      return '<span><span class="dot" style="background:' + color[h.codigo] + '"></span>' + esc(h.codigo + (h.nombre ? ' · ' + h.nombre : '')) + '</span>';
+    }).join('');
+  }
+  document.querySelectorAll('.tabs button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      vista = b.getAttribute('data-view');
+      document.querySelectorAll('.tabs button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      if (resultado && !resultado.errores.length) pintarGantt();
+    });
+  });
+
+  function pintarCronograma() {
+    var r = resultado, devCols = '';
+    for (var k = 0; k < r.devs; k++) devCols += '<th class="num">Dev ' + (k + 1) + ' (h)</th>';
+    var saltos = {}; r.saltados.forEach(function (s) { saltos[s.fecha] = s.motivo; });
+    var filas = [], si = 0, totH = new Array(r.devs).fill(0);
+    r.dias.forEach(function (d, i) {
+      while (si < r.saltados.length && r.saltados[si].fecha < d.fecha) {
+        var s = r.saltados[si++];
+        filas.push('<tr class="skip"><td>' + fmtF(s.fecha) + '</td><td>' + E.DIAS[E.parseFecha(s.fecha).getUTCDay()] + '</td><td colspan="' + (r.devs + 3) + '">' + esc(s.motivo) + '</td></tr>');
+      }
+      d.horas.forEach(function (h, k) { totH[k] += h; });
+      var clases = (esLunes(r.dias, i) ? ' wk' : '') + (d.holgura ? ' hol' : '');
+      filas.push('<tr' + (clases ? ' class="' + clases.trim() + '"' : '') + '><td>' + fmtF(d.fecha) + '</td><td>' + d.dia + '</td>' +
+        d.horas.map(function (h) { return '<td class="num">' + n(h) + '</td>'; }).join('') +
+        '<td class="hu">' + esc(E.etiquetaDia(d)) + '</td><td class="num">' + n(d.puntos) + '</td><td class="num">' + n(d.restante) + '</td></tr>');
+    });
+    $('sched').innerHTML = '<thead><tr><th>Fecha</th><th>Día</th>' + devCols + '<th>HU</th><th class="num">Puntos planeados</th><th class="num">Puntos restantes</th></tr></thead>' +
+      '<tbody>' + filas.join('') + '</tbody><tfoot><tr><td>TOTAL</td><td>' + r.dias.length + ' días</td>' +
+      totH.map(function (h) { return '<td class="num">' + n(h) + '</td>'; }).join('') + '<td></td><td class="num">' + n(r.total) + '</td><td></td></tr></tfoot>';
+  }
+
+  function pintarResumenHu() {
+    var r = resultado;
+    $('huSummary').innerHTML = '<thead><tr><th>Código</th><th>Nombre</th><th class="num">Puntos</th><th class="num">Horas</th><th>Depende de</th><th>Inicio</th><th>Fin</th><th class="num">Días con trabajo</th><th class="num">Días de holgura</th></tr></thead><tbody>' +
+      r.orden.map(function (cod) {
+        var h = r.hus.filter(function (x) { return x.codigo === cod; })[0];
+        return '<tr><td>' + esc(h.codigo) + '</td><td>' + esc(h.nombre) + '</td><td class="num">' + n(h.puntos) + '</td><td class="num">' + n(h.puntos * 4) + '</td><td>' +
+          esc(h.deps.join(', ') || '—') + '</td><td>' + fmtF(h.inicio) + '</td><td>' + fmtF(h.fin) + '</td><td class="num">' + h.diasTrabajo + '</td><td class="num">' + h.diasHolgura + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  // ---------- Exportar a Excel ----------
+  $('btnExport').addEventListener('click', function () {
+    if (typeof ExcelJS === 'undefined') { alert('No se pudo cargar la librería de Excel (requiere conexión a internet).'); return; }
+    exportar().catch(function (e) { alert('Error al generar el Excel: ' + e.message); });
+  });
+
+  function colLetra(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  // ExcelJS escribe las fechas en UTC: una fecha a medianoche UTC queda como día exacto, sin hora
+  function fechaExcel(s) { return E.parseFecha(s); }
+
+  function exportar() {
+    var r = resultado, wb = new ExcelJS.Workbook();
+    var AZUL = 'FF1F4E79', GRIS = 'FFF2F2F2';
+    var borde = { style: 'thin', color: { argb: 'FFBFBFBF' } };
+    var bordes = { top: borde, left: borde, bottom: borde, right: borde };
+    function encabezado(row) {
+      row.eachCell(function (c) {
+        c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AZUL } };
+        c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        c.border = bordes;
+      });
+      row.height = 32;
+    }
+    function cuerpo(row, n) { for (var i = 1; i <= n; i++) row.getCell(i).border = bordes; }
+    var titulo = state.proyecto ? state.proyecto : 'Proyecto';
+    var resumen = r.devs + ' desarrollador' + (r.devs > 1 ? 'es' : '') + ' · 4 h/día c/u · 1 punto de historia = 4 horas = dedicación diaria · Lunes a viernes' +
+      (state.festivosCO !== false ? ', festivos de Colombia excluidos' : '');
+
+    // Hoja 1: Historias de usuario
+    var ws1 = wb.addWorksheet('Historias de usuario');
+    ws1.columns = [{ width: 10 }, { width: 40 }, { width: 12 }, { width: 24 }, { width: 10 }, { width: 13 }, { width: 13 }, { width: 12 }, { width: 12 }];
+    encabezado(ws1.addRow(['Código', 'Nombre', 'Puntos de historia', 'Dependencias', 'Horas', 'Inicio', 'Fin', 'Días con trabajo', 'Días de holgura']));
+    var mapa = {}; r.hus.forEach(function (h) { mapa[h.codigo] = h; });
+    state.hus.forEach(function (orig) {
+      var h = mapa[String(orig.codigo).trim()]; if (!h) return;
+      var row = ws1.addRow([h.codigo, h.nombre, h.puntos, h.deps.length ? h.deps.join(', ') : 'No', null, fechaExcel(h.inicio), fechaExcel(h.fin), h.diasTrabajo, h.diasHolgura]);
+      row.getCell(5).value = { formula: 'C' + row.number + '*4', result: h.puntos * 4 };
+      row.getCell(6).numFmt = row.getCell(7).numFmt = 'dd/mm/yyyy';
+      cuerpo(row, 9);
+    });
+    var last1 = ws1.rowCount;
+    var tot1 = ws1.addRow(['', 'TOTAL', { formula: 'SUM(C2:C' + last1 + ')', result: r.total }, '', { formula: 'SUM(E2:E' + last1 + ')', result: r.total * 4 }]);
+    tot1.getCell(9).value = { formula: 'SUM(I2:I' + last1 + ')', result: r.diasHolgura };
+    tot1.font = { bold: true }; cuerpo(tot1, 9);
+    ws1.views = [{ state: 'frozen', ySplit: 1 }];
+
+    // Hoja 2: Cronograma (mismas columnas del formato actual)
+    var ws = wb.addWorksheet('Cronograma');
+    var D = r.devs, cHU = 3 + D, cPlan = cHU + 1, cEje = cHU + 2, cRP = cHU + 3, cRR = cHU + 4, cObs = cHU + 5;
+    var L = function (c) { return colLetra(c - 1); };
+    ws.getCell('A1').value = 'Cronograma de Desarrollo · ' + titulo;
+    ws.getCell('A1').font = { bold: true, size: 14, color: { argb: AZUL } };
+    ws.mergeCells(1, 1, 1, cObs);
+    ws.getCell('A2').value = resumen;
+    ws.getCell('A2').font = { italic: true, color: { argb: 'FF595959' } };
+    ws.mergeCells(2, 1, 2, cObs);
+    var cab = ['Fecha', 'Día'];
+    for (var k = 1; k <= D; k++) cab.push('Developer ' + k + ' (hora)');
+    cab = cab.concat(['HU', 'Puntos de historia planeados', 'Puntos de historia ejecutados', 'Puntos de historia restantes (planeados)', 'Puntos de historia restantes (reales)', 'Observación']);
+    ws.getRow(4).values = cab; encabezado(ws.getRow(4));
+    var primera = 5, ultima = primera + r.dias.length - 1, filaTotal = ultima + 1;
+    r.dias.forEach(function (d, i) {
+      var rn = primera + i, row = ws.getRow(rn);
+      row.getCell(1).value = fechaExcel(d.fecha); row.getCell(1).numFmt = 'dd/mm/yyyy';
+      row.getCell(2).value = d.dia;
+      d.horas.forEach(function (h, k) { row.getCell(3 + k).value = h; });
+      row.getCell(cHU).value = E.etiquetaDia(d);
+      row.getCell(cPlan).value = d.puntos;
+      var restPlan = i === 0 ? '$' + L(cPlan) + '$' + filaTotal + '-' + L(cPlan) + rn : L(cRP) + (rn - 1) + '-' + L(cPlan) + rn;
+      row.getCell(cRP).value = { formula: restPlan, result: d.restante };
+      row.getCell(cHU).alignment = { wrapText: true, vertical: 'middle' };
+      row.getCell(cObs).alignment = { wrapText: true, vertical: 'top' };
+      cuerpo(row, cObs);
+      if (d.holgura) for (var c = 1; c <= cObs; c++) row.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE6EEF7' } };
+      if (esLunes(r.dias, i)) for (c = 1; c <= cObs; c++) row.getCell(c).border = Object.assign({}, bordes, { top: { style: 'medium', color: { argb: 'FF7F7F7F' } } });
+    });
+    var tot = ws.getRow(filaTotal);
+    tot.getCell(1).value = 'TOTAL';
+    for (var c = 3; c < cHU; c++) tot.getCell(c).value = { formula: 'SUM(' + L(c) + primera + ':' + L(c) + ultima + ')', result: r.dias.reduce(function (s, d) { return s + d.horas[c - 3]; }, 0) };
+    tot.getCell(cPlan).value = { formula: 'SUM(' + L(cPlan) + primera + ':' + L(cPlan) + ultima + ')', result: r.total };
+    tot.getCell(cEje).value = { formula: 'SUM(' + L(cEje) + primera + ':' + L(cEje) + ultima + ')', result: 0 };
+    tot.font = { bold: true };
+    for (c = 1; c <= cObs; c++) { tot.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRIS } }; tot.getCell(c).border = bordes; }
+    var anchos = [12, 11]; for (k = 0; k < D; k++) anchos.push(11);
+    ws.columns.forEach(function (col, i) { col.width = anchos[i] || 14; });
+    ws.getColumn(cHU).width = 30; ws.getColumn(cObs).width = 50;
+    ws.views = [{ state: 'frozen', ySplit: 4, xSplit: 2 }];
+
+    // Hoja 3: Supuestos y notas
+    var ws3 = wb.addWorksheet('Supuestos y notas');
+    ws3.columns = [{ width: 34 }, { width: 100 }];
+    ws3.getCell('A1').value = 'Supuestos y notas del cronograma';
+    ws3.getCell('A1').font = { bold: true, size: 14, color: { argb: AZUL } };
+    var dias = r.dias;
+    var notas = [
+      ['Equivalencia', '1 punto de historia = 4 horas = dedicación diaria de 1 desarrollador.'],
+      ['Capacidad del equipo', r.devs + ' desarrollador(es) x 4 h/día = ' + r.devs * 4 + ' h/día = ' + r.devs + ' punto(s) de historia/día.'],
+      ['Total estimado', r.hus.length + ' HU, ' + n(r.total) + ' puntos de historia (' + n(r.total * 4) + ' horas).'],
+      ['Fecha de inicio', fmtF(state.inicio) + (state.inicio !== dias[0].fecha ? ' (primer día hábil: ' + fmtF(dias[0].fecha) + ')' : '')],
+      ['Calendario laboral', 'Lunes a viernes' + (state.festivosCO !== false ? '; se excluyen los festivos de Colombia (Ley 51 de 1983).' : '; sin exclusión de festivos.') +
+        (String(state.noLaborales || '').trim() ? ' Días no laborables adicionales: ' + String(state.noLaborales).trim().split(/\r?\n/).join('; ') + '.' : '')],
+      ['Días no laborables en la ventana', r.saltados.length ? r.saltados.map(function (s) { return fmtF(s.fecha) + ' (' + s.motivo.replace('Festivo: ', '') + ')'; }).join('; ') : 'Ninguno cae dentro del rango del proyecto.'],
+      ['Orden de desarrollo', r.orden.join(' -> ') + '. Se respetan las dependencias declaradas.'],
+      ['Regla de asignación diaria', 'Cada desarrollador continúa su HU; cuando a una HU le queda menos de un día de trabajo, un desarrollador la termina y los demás arrancan el mismo día la siguiente HU, para no perder capacidad. En el último día de la última HU, las horas que quedan se dividen por igual entre los desarrolladores, redondeando hacia abajo si la fracción es menor o igual a 0,5 y hacia arriba si es mayor.'],
+      ['Holgura', r.diasHolgura ? n(r.holguraSemanas) + ' semana(s) = ' + r.diasHolgura + ' días hábiles (1 semana = 5 días hábiles), repartidos por igual entre las HU: ' +
+        r.orden.map(function (c) { return c + ' ' + mapa[c].diasHolgura + ' d'; }).join(', ') + '. Cada HU recibe sus días de holgura justo después de terminar; en esos días todo el equipo queda asignado a esa HU y no se consumen puntos planeados.' : 'Sin holgura.'],
+      ['Resultado', dias.length + ' días hábiles' + (r.diasHolgura ? ' (' + (dias.length - r.diasHolgura) + ' de desarrollo + ' + r.diasHolgura + ' de holgura)' : ' de desarrollo') + ', del ' + fmtF(dias[0].fecha) + ' al ' + fmtF(dias[dias.length - 1].fecha) + '.'],
+      ['Puntos ejecutados / Restantes reales / Observación', 'Se dejan en blanco: el equipo los diligencia día a día durante la ejecución real del proyecto.'],
+      ['Volver a abrir el proyecto', 'Este archivo trae una hoja oculta («' + HOJA_DATOS + '») con los parámetros y las historias de usuario. Para retomar o ajustar el cronograma, ábrelo en la herramienta con «Abrir Excel».']
+    ];
+    r.advertencias.forEach(function (a) { notas.push(['Advertencia', a]); });
+    notas.forEach(function (x, i) {
+      var row = ws3.getRow(3 + i); row.values = x;
+      row.getCell(1).font = { bold: true };
+      row.getCell(1).alignment = row.getCell(2).alignment = { wrapText: true, vertical: 'top' };
+      cuerpo(row, 2);
+    });
+
+    // Hoja 4: Festivos de los años del proyecto
+    if (state.festivosCO !== false) {
+      var ws4 = wb.addWorksheet('Festivos Colombia');
+      ws4.columns = [{ width: 13 }, { width: 12 }, { width: 34 }];
+      encabezado(ws4.addRow(['Fecha', 'Día', 'Festivo']));
+      for (var y = +dias[0].fecha.slice(0, 4); y <= +dias[dias.length - 1].fecha.slice(0, 4); y++) {
+        E.festivosColombia(y).forEach(function (f) {
+          var row = ws4.addRow([fechaExcel(f.fecha), E.DIAS[E.parseFecha(f.fecha).getUTCDay()], f.nombre]);
+          row.getCell(1).numFmt = 'dd/mm/yyyy'; cuerpo(row, 3);
+        });
+      }
+    }
+
+    // Hoja oculta: parámetros e historias tal como están en la herramienta
+    var wsD = wb.addWorksheet(HOJA_DATOS, { state: 'hidden' });
+    wsD.columns = [{ width: 18 }, { width: 40 }, { width: 12 }, { width: 24 }];
+    wsD.addRow(['cronoAI', VERSION_DATOS, 'No modificar: permite volver a abrir este proyecto en la herramienta.']);
+    PARAMETROS.forEach(function (k) { wsD.addRow([k, state[k] == null ? '' : state[k]]); });
+    wsD.addRow([]);
+    wsD.addRow(['Código', 'Nombre', 'Puntos', 'Dependencias']).font = { bold: true };
+    state.hus.forEach(function (h) { wsD.addRow([h.codigo, h.nombre, h.puntos, h.deps]); });
+
+    wb.views = [{ activeTab: 1 }];
+    wb.calcProperties.fullCalcOnLoad = true;
+    return wb.xlsx.writeBuffer().then(function (buf) {
+      var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Cronograma - ' + titulo.replace(/[\\/:*?"<>|]/g, '') + '.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    });
+  }
+
+  pintarParametros(); pintarHus(); calcular();
+})();
+</script>
+</body>
+</html>
