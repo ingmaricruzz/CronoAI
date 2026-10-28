@@ -105,6 +105,13 @@
   .sw { display: inline-block; width: 14px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--border); }
   .sw.hol { background-color: var(--muted); border-color: transparent; }
   .sw.medio { background: var(--warn-bg); border-color: #e9d29a; }
+  .gantt .bar { cursor: default; }
+  .legend .nota { color: var(--text); font-weight: 600; }
+  #tip { position: fixed; z-index: 900; pointer-events: none; max-width: 340px; background: #1d2330; color: #fff; border-radius: 6px;
+    padding: 8px 10px; font-size: 12px; line-height: 1.5; box-shadow: 0 6px 18px rgba(0,0,0,.22); }
+  #tip .tit { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+  #tip b { color: #ffd98a; }
+  #tip .sub { color: #c3cad6; }
   .sched tr.hol td { background: var(--accent-soft); }
   .sched tr.medio td { background: var(--warn-bg); }
   .sched .tag { font-size: 11px; color: var(--warn-text); font-weight: 600; margin-left: 6px; }
@@ -185,6 +192,7 @@
     <div class="hint" id="ganttAyuda">Haz clic en la fecha de un día para marcarlo como <b>medio día</b>; un segundo clic lo vuelve <b>no laborable</b> y un tercero lo deja hábil otra vez.</div>
     <div class="scroll" id="gantt"></div>
     <div class="legend" id="legend"></div>
+    <div id="tip" role="tooltip" hidden></div>
   </div>
 
   <div class="cols">
@@ -876,32 +884,46 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     });
     cols.forEach(function (c, i) { c.wk = i > 0 && c.dow <= cols[i - 1].dow; });
 
+    // Aviso al pasar el cursor por una caja: título y renglones en HTML (con el texto ya escapado)
+    var nombre = {}; r.hus.forEach(function (h) { nombre[h.codigo] = h.nombre; });
+    function huTxt(cod) { return esc(cod + (nombre[cod] ? ' · ' + nombre[cod] : '')); }
+    function ptsTxt(p) { return '<b>' + n(p) + (p === 1 ? ' punto' : ' puntos') + ' de historia</b> (' + n(p * E.HORAS_POR_PUNTO) + ' h)'; }
+    function fechaTip(c) { return esc(c.dia + ' ' + fmtF(c.fecha)) + (c.medio ? ' · <span class="sub">' + esc(notaMedio(c.d)) + '</span>' : ''); }
+    var HOLGURA_TIP = '<span class="sub">Día de holgura («H»): no consume puntos de historia.</span>';
+
     var filas;
     if (vista === 'hu') {
       filas = r.orden.map(function (cod) {
-        var h = r.hus.filter(function (x) { return x.codigo === cod; })[0];
-        return { lbl: cod, nom: h.nombre, celdas: cols.map(function (c) {
+        return { lbl: cod, nom: nombre[cod], celdas: cols.map(function (c) {
           if (!c.d) return null;
-          var quien = [], pts = 0, base = cod + ' · ' + c.dia + ' ' + fmtF(c.fecha);
-          c.d.asignacion.forEach(function (t, k) { t.forEach(function (x) { if (x.hu === cod) { quien.push('Dev.' + (k + 1)); pts += x.puntos; } }); });
+          var quien = [], pts = 0;
+          c.d.asignacion.forEach(function (t, k) { t.forEach(function (x) { if (x.hu === cod) { quien.push('Dev.' + (k + 1) + ': ' + n(x.puntos) + ' pt'); pts += x.puntos; } }); });
           if (!quien.length) return null;
-          if (c.d.holgura) return { segs: [{ color: color[cod], peso: 1 }], hol: true, txt: 'H', title: base + ' · holgura' };
-          return { segs: [{ color: color[cod], peso: 1 }], txt: n(pts), title: base + ' · ' + quien.join(', ') + ' · ' + n(pts) + ' pts' };
+          var tip = { t: huTxt(cod), l: [fechaTip(c)] };
+          if (c.d.holgura) { tip.l.push(HOLGURA_TIP); return { segs: [{ color: color[cod], peso: 1 }], hol: true, txt: 'H', tip: tip }; }
+          tip.l.push(ptsTxt(pts), '<span class="sub">' + esc(quien.join(' · ')) + '</span>', '<span class="sub">El número de la caja son los puntos de historia del día.</span>');
+          return { segs: [{ color: color[cod], peso: 1 }], txt: n(pts), tip: tip };
         }) };
       });
     } else {
       filas = [];
       for (var k = 0; k < r.devs; k++) filas.push({ lbl: 'Developer ' + (k + 1), nom: '', celdas: cols.map(function (c) {
         if (!c.d) return null;
-        var t = c.d.asignacion[k], base = c.dia + ' ' + fmtF(c.fecha) + ' · ', horas = n(c.d.horas[k]);
+        var t = c.d.asignacion[k];
         if (!t.length) return null;
         var segs = t.map(function (x) { return { color: color[x.hu], peso: x.puntos || 1 }; });
-        if (c.d.holgura) return { segs: segs, hol: true, txt: 'H', title: base + c.d.holgura + ' · holgura (' + horas + ' h)' };
-        return { segs: segs, txt: t[0].hu.replace(/^\D+/, ''), title: base + t.map(function (x) { return x.hu + ' (' + n(x.puntos * 4) + ' h)'; }).join(' + ') };
+        var tip = { t: esc('Developer ' + (k + 1)), l: [fechaTip(c)] };
+        if (c.d.holgura) { tip.l.push(huTxt(c.d.holgura), HOLGURA_TIP); return { segs: segs, hol: true, txt: 'H', tip: tip }; }
+        t.forEach(function (x) { tip.l.push(ptsTxt(x.puntos) + ' · ' + huTxt(x.hu)); });
+        var num = t[0].hu.replace(/^\D+/, '');
+        tip.l.push('<span class="sub">El número de la caja es la historia: ' + esc(num) + ' = ' + esc(t[0].hu) + '.</span>');
+        return { segs: segs, txt: num, tip: tip };
       }) });
     }
 
-    var leyenda = r.hus.map(function (h) { return { color: color[h.codigo], txt: h.codigo + (h.nombre ? ' · ' + h.nombre : '') }; });
+    var leyenda = [{ tipo: 'nota', txt: vista === 'hu' ? 'Número en la caja: puntos de historia del día' :
+      'Número en la caja: historia asignada (' + r.orden[0].replace(/^\D+/, '') + ' = ' + r.orden[0] + ')' }];
+    leyenda = leyenda.concat(r.hus.map(function (h) { return { color: color[h.codigo], txt: h.codigo + (h.nombre ? ' · ' + h.nombre : '') }; }));
     if (r.diasHolgura) leyenda.push({ tipo: 'hol', txt: 'Holgura' });
     if (cols.some(function (c) { return c.medio; })) leyenda.push({ tipo: 'medio', txt: 'Medio día (2 h por desarrollador)' });
     if (r.saltados.length) leyenda.push({ tipo: 'salto', txt: 'Festivo o día no laborable' });
@@ -945,18 +967,22 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
       return '<th class="day' + cls(c) + (info.clic ? ' clic' : '') + '" data-f="' + c.fecha + '" title="' + esc(info.title) + '">' +
         c.fecha.slice(8) + '<br>' + (c.medio ? '½' : c.dia[0]) + '</th>';
     }).join('') + '</tr>';
-    var body = m.filas.map(function (f) {
+    var body = m.filas.map(function (f, j) {
       return '<tr><td class="lbl" title="' + esc(f.lbl + (f.nom ? ' · ' + f.nom : '')) + '"><b>' + esc(f.lbl) + '</b>' +
         (f.nom ? '<span class="nom">' + esc(f.nom) + '</span>' : '') + '</td>' +
         f.celdas.map(function (x, i) {
           var c = cols[i], td = '<td class="c' + cls(c) + '"';
           if (!x) return td + (c.salto ? ' title="' + esc(c.salto.motivo) + '"' : '') + '></td>';
           var fondo = x.hol ? 'background-color:' + x.segs[0].color : 'background:' + fondoBarra(x.segs);
-          return td + '><span class="bar' + (x.hol ? ' hol' : '') + '" style="' + fondo + '" title="' + esc(x.title) + '">' + esc(x.txt) + '</span></td>';
+          return td + '><span class="bar' + (x.hol ? ' hol' : '') + '" style="' + fondo + '" data-r="' + j + '" data-c="' + i + '" aria-label="' +
+            esc(textoTip(x.tip)) + '">' + esc(x.txt) + '</span></td>';
         }).join('') + '</tr>';
     }).join('');
+    ocultarTip();
+    ganttActual = m;
     $('gantt').innerHTML = '<table class="gantt" data-n="' + cols.length + '" style="--fila:' + z.fila + 'px;--fs:' + z.fs + 'px">' + head + body + '</table>';
     $('legend').innerHTML = m.leyenda.map(function (it) {
+      if (it.tipo === 'nota') return '<span class="nota">' + esc(it.txt) + '</span>';
       var sw = it.tipo ? '<span class="sw ' + it.tipo + '"></span>' : '<span class="dot" style="background:' + it.color + '"></span>';
       return '<span>' + sw + esc(it.txt) + '</span>';
     }).join('');
@@ -971,6 +997,28 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     t.style.setProperty('--cel', cel + 'px');
   }
   window.addEventListener('resize', ajustarGantt);
+
+  // Aviso propio en lugar del title nativo: aparece al instante y puede tener varios renglones
+  var ganttActual = null;
+  function textoTip(tip) { return [tip.t].concat(tip.l).join('. ').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&'); }
+  function ocultarTip() { $('tip').hidden = true; }
+  function moverTip(e) {
+    var t = $('tip'), w = t.offsetWidth, h = t.offsetHeight, x = e.clientX + 14, y = e.clientY + 18;
+    if (x + w > window.innerWidth - 8) x = e.clientX - w - 14;
+    if (y + h > window.innerHeight - 8) y = e.clientY - h - 12;
+    t.style.left = Math.max(8, x) + 'px'; t.style.top = Math.max(8, y) + 'px';
+  }
+  $('gantt').addEventListener('mouseover', function (e) {
+    var b = e.target.closest('.bar');
+    if (!b || !ganttActual) { ocultarTip(); return; }
+    var tip = ganttActual.filas[+b.getAttribute('data-r')].celdas[+b.getAttribute('data-c')].tip;
+    $('tip').innerHTML = '<div class="tit">' + tip.t + '</div>' + tip.l.map(function (l) { return '<div>' + l + '</div>'; }).join('');
+    $('tip').hidden = false; moverTip(e);
+  });
+  $('gantt').addEventListener('mousemove', function (e) { if (!$('tip').hidden) moverTip(e); });
+  $('gantt').addEventListener('mouseleave', ocultarTip);
+  $('gantt').addEventListener('scroll', ocultarTip);
+
   $('gantt').addEventListener('click', function (e) {
     var th = e.target.closest('th.clic'); if (th) alternarDia(th.getAttribute('data-f'));
   });
@@ -1018,7 +1066,8 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     // Leyenda en renglones que caben en el ancho de la imagen
     medir.font = '12px ' + FUENTE;
     var lx = 0, ly = 0, posLey = m.leyenda.map(function (it) {
-      var w = 22 + medir.measureText(it.txt).width + 18;
+      medir.font = (it.tipo === 'nota' ? '600 ' : '') + '12px ' + FUENTE;
+      var w = (it.tipo === 'nota' ? 0 : 22) + medir.measureText(it.txt).width + 18;
       if (lx > 0 && lx + w > W - 2 * P) { lx = 0; ly += hLey; }
       var p = { x: lx, y: ly }; lx += w; return p;
     });
@@ -1110,6 +1159,7 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     // Leyenda
     m.leyenda.forEach(function (it, i) {
       var x = P + posLey[i].x, y = yFin + 20 + posLey[i].y + hLey / 2;
+      if (it.tipo === 'nota') { texto(it.txt, x, y, '600 12px', C.texto); return; }
       if (it.tipo === 'salto') { ctx.fillStyle = C.saltoB; ctx.fillRect(x, y - 5, 14, 10); rayas(x, y - 5, 14, 10, C.saltoA, 3); }
       else if (it.tipo === 'medio') { ctx.fillStyle = C.medio; ctx.fillRect(x, y - 5, 14, 10); ctx.strokeStyle = '#e9d29a'; ctx.strokeRect(x + 0.5, y - 4.5, 13, 9); }
       else if (it.tipo === 'hol') { ctx.save(); ctx.globalAlpha = 0.75; ctx.fillStyle = C.muted; ctx.fillRect(x, y - 5, 14, 10); rayas(x, y - 5, 14, 10, 'rgba(255,255,255,.45)', 3); ctx.restore(); }
