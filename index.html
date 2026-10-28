@@ -21,18 +21,21 @@
     --err-text: #9b1c1c;
     --skip-bg: #f0f1f4;
     --week: #b9c2d0;
+    --salto-a: #e3e6ec;
+    --salto-b: #f3f4f7;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
     font: 14px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
-  header { padding: 18px 24px 6px; }
+  header { padding: 18px 24px 6px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
   header h1 { margin: 0; font-size: 20px; }
   header p { margin: 4px 0 0; color: var(--muted); }
-  main { display: grid; grid-template-columns: minmax(340px, 540px) 1fr; gap: 16px; padding: 12px 24px 32px; align-items: start; }
-  @media (max-width: 1000px) { main { grid-template-columns: 1fr; padding: 12px 16px 24px; } header { padding: 16px 16px 4px; } }
-  main > section { min-width: 0; }
+  .acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+  main { padding: 12px 24px 32px; }
+  main > * + * { margin-top: 16px; }
+  .cols { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1.6fr); gap: 16px; align-items: start; }
+  @media (max-width: 1000px) { .cols { grid-template-columns: 1fr; } main { padding: 12px 16px 24px; } header { padding: 16px 16px 4px; } }
   .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; min-width: 0; }
-  .panel + .panel { margin-top: 16px; }
   h2 { font-size: 15px; margin: 0 0 12px; }
   label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -63,7 +66,9 @@
   .msgs div { padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
   .msgs .warn { background: var(--warn-bg); color: var(--warn-text); }
   .msgs .err { background: var(--err-bg); color: var(--err-text); }
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .msgs:empty { display: none; }
+  .msgs:not(:empty) + .cards:not(:empty) { margin-top: 4px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
   .card { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
   .card .k { font-size: 12px; color: var(--muted); }
   .card .v { font-size: 20px; font-weight: 600; margin-top: 2px; }
@@ -71,16 +76,52 @@
   .scroll { overflow-x: auto; }
   .tabs { display: flex; gap: 4px; margin-bottom: 10px; }
   .tabs button.on { background: var(--accent-soft); border-color: var(--accent); }
-  .gantt { border-collapse: separate; border-spacing: 0; width: auto; font-size: 11px; }
+  .cabecera { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .cabecera h2, .cabecera .tabs { margin: 0; }
+  .cabecera .der { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .zoom { display: flex; }
+  .zoom button { padding: 4px 10px; }
+  .zoom button:first-child { border-radius: 6px 0 0 6px; }
+  .zoom button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+  #ganttAyuda { margin: 0 0 10px; }
+  .vacio { color: var(--muted); font-size: 13px; padding: 24px 0; text-align: center; }
+  .gantt { --cel: 34px; --fila: 30px; --fs: 11px; border-collapse: separate; border-spacing: 0; width: auto; font-size: 11px; }
   .gantt th, .gantt td { border-bottom: none; padding: 0; }
-  .gantt .lbl { position: sticky; left: 0; background: var(--panel); padding: 2px 10px 2px 0; white-space: nowrap; z-index: 1; font-size: 12px; }
-  .gantt .day { width: 24px; min-width: 24px; text-align: center; color: var(--muted); font-weight: 400; }
-  .gantt .mon { text-align: left; color: var(--text); font-weight: 600; padding-left: 2px; border-left: 1px solid var(--week); }
-  .gantt td.c { height: 22px; border-left: 1px solid transparent; }
+  .gantt .lbl { position: sticky; left: 0; background: var(--panel); padding: 0 12px 0 0; white-space: nowrap; z-index: 1; font-size: 12px; }
+  .gantt .lbl .nom { display: inline-block; max-width: 240px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; color: var(--muted); margin-left: 4px; }
+  .gantt .day { width: var(--cel); min-width: var(--cel); max-width: var(--cel); text-align: center; color: var(--muted); font-weight: 400; padding: 2px 0 4px; line-height: 1.3; user-select: none; }
+  .gantt th.clic { cursor: pointer; }
+  .gantt th.clic:hover { background: var(--accent-soft); color: var(--text); }
+  .gantt .mon { text-align: left; color: var(--text); font-weight: 600; padding-left: 4px; border-left: 1px solid var(--week); }
+  .gantt td.c { height: var(--fila); border-left: 1px solid transparent; border-bottom: 1px solid var(--skip-bg); }
   .gantt .wk { border-left: 1px solid var(--week) !important; }
-  .gantt .bar { display: block; height: 16px; margin: 3px 1px; border-radius: 3px; color: #fff; text-align: center; line-height: 16px; font-size: 10px; font-weight: 600; }
-  .gantt .bar.hol { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.45) 0 3px, transparent 3px 7px); opacity: .75; }
+  .gantt .medio { background: var(--warn-bg); }
+  .gantt th.medio { color: var(--warn-text); font-weight: 600; }
+  .gantt .salto, .sw.salto { background: repeating-linear-gradient(135deg, var(--salto-a) 0 3px, var(--salto-b) 3px 7px); }
+  .gantt th.salto { color: var(--muted); }
+  .gantt .bar { display: block; height: calc(var(--fila) - 8px); margin: 4px 1px; border-radius: 3px; color: #fff; text-align: center;
+    line-height: calc(var(--fila) - 8px); font-size: var(--fs); font-weight: 600; overflow: hidden; white-space: nowrap; }
+  .gantt .bar.hol, .sw.hol { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.45) 0 3px, transparent 3px 7px); opacity: .75; }
+  .sw { display: inline-block; width: 14px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--border); }
+  .sw.hol { background-color: var(--muted); border-color: transparent; }
+  .sw.medio { background: var(--warn-bg); border-color: #e9d29a; }
   .sched tr.hol td { background: var(--accent-soft); }
+  .sched tr.medio td { background: var(--warn-bg); }
+  .sched .tag { font-size: 11px; color: var(--warn-text); font-weight: 600; margin-left: 6px; }
+  .det { max-height: 70vh; overflow: auto; }
+  .det thead th { position: sticky; top: 0; z-index: 1; }
+  .lbl-grupo { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .nl-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .nl-form label { margin-bottom: 2px; }
+  .nl-form + .toolbar { margin-top: 8px; align-items: center; }
+  #nlError { color: var(--err-text); margin: 0; }
+  .nl-lista { list-style: none; margin: 10px 0 0; padding: 0; }
+  .nl-lista li { display: grid; grid-template-columns: minmax(96px, auto) 120px 1fr auto; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .nl-lista li.vacio { display: block; padding: 6px 0; text-align: left; font-size: 12px; }
+  .nl-lista .rango { font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .nl-lista select, .nl-lista input { padding: 3px 6px; }
+  @media (max-width: 600px) { .gantt .lbl .nom { display: none; } }
+  @media (max-width: 560px) { .nl-lista li { grid-template-columns: 120px 1fr auto; } .nl-lista .rango { grid-column: 1 / -1; } }
   .sched tr.skip td { background: var(--skip-bg); color: var(--muted); font-style: italic; }
   .sched tr.wk td { border-top: 2px solid var(--week); }
   .sched td { white-space: nowrap; }
@@ -92,7 +133,6 @@
   dialog textarea { min-height: 200px; }
   .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--muted); }
   .msgs .info { background: var(--accent-soft); color: var(--text); }
-  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   #tourBlock { position: fixed; inset: 0; z-index: 1000; }
   #tourSpot { position: fixed; z-index: 1001; border-radius: 8px; pointer-events: none;
     box-shadow: 0 0 0 9999px rgba(15, 23, 35, .55); transition: all .25s ease; }
@@ -113,11 +153,41 @@
     <h1>CronoAI · Generador de cronograma</h1>
     <p>1 punto de historia = 4 horas = dedicación diaria máxima de un desarrollador. Lunes a viernes, sin festivos.</p>
   </div>
-  <button id="btnTour" title="Recorrido guiado por la herramienta">Tutorial</button>
+  <div class="acciones" id="acciones">
+    <button id="btnImport" title="Abre un Excel exportado por esta herramienta (recupera todo el proyecto) o cualquier Excel con columnas Código y Puntos de historia (sólo las historias)">Abrir Excel</button>
+    <input id="fileImport" type="file" accept=".xlsx" hidden>
+    <button class="primary" id="btnExport">Descargar Excel</button>
+    <button id="btnTour" title="Recorrido guiado por la herramienta">Tutorial</button>
+  </div>
 </header>
 
 <main>
-  <section>
+  <div class="panel" id="pnlResultado">
+    <div class="msgs" id="msgs"></div>
+    <div class="cards" id="cards"></div>
+  </div>
+
+  <div class="panel" id="pnlGantt">
+    <div class="cabecera">
+      <h2>Línea de tiempo</h2>
+      <div class="tabs" id="tabsGantt">
+        <button data-view="hu" class="on">Por historia</button>
+        <button data-view="dev">Por desarrollador</button>
+      </div>
+      <div class="der">
+        <div class="zoom" role="group" aria-label="Tamaño de la línea de tiempo">
+          <button id="zoomMenos" title="Reducir la línea de tiempo">−</button>
+          <button id="zoomMas" title="Ampliar la línea de tiempo">+</button>
+        </div>
+        <button id="btnPng" title="Descarga la línea de tiempo completa como imagen">Descargar PNG</button>
+      </div>
+    </div>
+    <div class="hint" id="ganttAyuda">Haz clic en la fecha de un día para marcarlo como <b>medio día</b>; un segundo clic lo vuelve <b>no laborable</b> y un tercero lo deja hábil otra vez.</div>
+    <div class="scroll" id="gantt"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="cols">
     <div class="panel" id="pnlParams">
       <h2>Parámetros</h2>
       <div class="field">
@@ -143,8 +213,20 @@
         <label class="check"><input id="festivosCO" type="checkbox"> Excluir festivos de Colombia (Ley Emiliani, calculados para cualquier año)</label>
       </div>
       <div class="field" id="fNoLaborales">
-        <label for="noLaborales">Otros días no laborables (vacaciones colectivas, días de la empresa…)</label>
-        <textarea id="noLaborales" placeholder="Una fecha o rango por línea, p. ej.:&#10;2026-12-24&#10;24/12/2026&#10;2026-12-28 a 2027-01-08"></textarea>
+        <div class="lbl-grupo">Otros días no laborables (vacaciones colectivas, días de la empresa, medios días…)</div>
+        <div class="nl-form">
+          <div><label for="nlDesde">Fecha (o inicio del rango)</label><input id="nlDesde" type="date"></div>
+          <div><label for="nlHasta">Hasta (opcional)</label><input id="nlHasta" type="date"></div>
+          <div><label for="nlTipo">Tipo</label>
+            <select id="nlTipo"><option value="completo">Día completo</option><option value="medio">Medio día (2 h por desarrollador)</option></select></div>
+          <div><label for="nlMotivo">Motivo (opcional)</label><input id="nlMotivo" placeholder="p. ej. Nochebuena"></div>
+        </div>
+        <div class="toolbar">
+          <button id="nlAdd">+ Agregar</button>
+          <span class="hint" id="nlError" role="alert"></span>
+        </div>
+        <ul class="nl-lista" id="nlLista"></ul>
+        <div class="hint">Atajo: en la línea de tiempo, haz clic en la fecha de un día para marcarlo como medio día o no laborable.</div>
       </div>
     </div>
 
@@ -161,42 +243,19 @@
       <div class="toolbar" id="barHus">
         <button id="btnAdd">+ Agregar HU</button>
         <button id="btnPaste">Pegar desde Excel</button>
-        <button id="btnImport" title="Abre un Excel exportado por esta herramienta (recupera todo el proyecto) o cualquier Excel con columnas Código y Puntos de historia (sólo las historias)">Abrir Excel</button>
-        <input id="fileImport" type="file" accept=".xlsx" hidden>
         <button id="btnReset" title="Reemplaza los datos actuales por el proyecto de ejemplo">Cargar ejemplo</button>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section>
-    <div class="panel" id="pnlResultado">
-      <div class="msgs" id="msgs"></div>
-      <div class="cards" id="cards"></div>
-      <div class="toolbar">
-        <button class="primary" id="btnExport">Descargar Excel</button>
-      </div>
+  <div class="panel" id="pnlDetalle">
+    <div class="tabs" id="tabsDetalle">
+      <button data-det="detSched" class="on">Cronograma diario</button>
+      <button data-det="detRes">Resumen por historia</button>
     </div>
-
-    <div class="panel" id="pnlGantt">
-      <h2>Línea de tiempo</h2>
-      <div class="tabs">
-        <button data-view="hu" class="on">Por historia</button>
-        <button data-view="dev">Por desarrollador</button>
-      </div>
-      <div class="scroll" id="gantt"></div>
-      <div class="legend" id="legend"></div>
-    </div>
-
-    <div class="panel" id="pnlSched">
-      <h2>Cronograma diario</h2>
-      <div class="scroll"><table class="sched" id="sched"></table></div>
-    </div>
-
-    <div class="panel">
-      <h2>Resumen por historia</h2>
-      <div class="scroll"><table id="huSummary"></table></div>
-    </div>
-  </section>
+    <div class="det" id="detSched"><table class="sched" id="sched"></table></div>
+    <div class="det" id="detRes" hidden><table id="huSummary"></table></div>
+  </div>
 </main>
 
 <div id="tour" hidden>
@@ -291,16 +350,41 @@ var CronoEngine = (function () {
     return (cacheFestivos[y] = lista);
   }
 
-  // Líneas: "2026-12-24", "24/12/2026" o rangos "2026-12-28 a 2027-01-08" (también "..", " - " o "al")
+  // Días no laborables como lista de { desde, hasta, medio, motivo } (fechas AAAA-MM-DD; hasta vacío = un solo día).
+  // En texto, una entrada por línea: "2026-12-24", "24/12/2026" o rangos "2026-12-28 a 2027-01-08" (también "..", " - " o "al");
+  // «medio» o «medio día» la marca como medio día y lo que va después de «#» es el motivo
   function parseNoLaborales(texto) {
-    var dias = {}, errores = [];
+    var entradas = [], errores = [];
     String(texto || '').split(/\r?\n/).forEach(function (linea, i) {
-      var t = linea.replace(/#.*/, '').trim();
+      var p = linea.indexOf('#'), motivo = p >= 0 ? linea.slice(p + 1).trim() : '';
+      var t = (p >= 0 ? linea.slice(0, p) : linea).trim();
       if (!t) return;
-      var partes = t.split(/\s*(?:\.\.|\s-\s|\bal?\b)\s*/i).filter(Boolean);
+      var medio = /\bmedio\b|½/i.test(t);
+      var partes = t.replace(/\(?\s*(?:medio(?:\s+d[ií]a)?|½)\s*\)?/gi, ' ').trim().split(/\s*(?:\.\.|\s-\s|\bal?\b)\s*/i).filter(Boolean);
       var a = parseFecha(partes[0]), b = partes[1] ? parseFecha(partes[1]) : a;
       if (!a || !b || partes.length > 2 || b < a) { errores.push('Línea ' + (i + 1) + ' de días no laborables no reconocida: «' + t + '»'); return; }
-      for (var d = a; d <= b; d = addDays(d, 1)) dias[ymd(d)] = 'No laborable';
+      entradas.push({ desde: ymd(a), hasta: partes[1] ? ymd(b) : '', medio: medio, motivo: motivo });
+    });
+    return { entradas: entradas, errores: errores };
+  }
+  function textoNoLaborales(entradas) {
+    return (entradas || []).map(function (e) {
+      return e.desde + (e.hasta && e.hasta !== e.desde ? ' a ' + e.hasta : '') + (e.medio ? ' medio día' : '') + (e.motivo ? ' # ' + e.motivo : '');
+    }).join('\n');
+  }
+  // Día completo prevalece sobre medio día cuando dos entradas cubren la misma fecha
+  function diasNoLaborales(v) {
+    var lista = typeof v === 'string' ? parseNoLaborales(v) : { entradas: v || [], errores: [] };
+    var dias = {}, errores = lista.errores.slice();
+    lista.entradas.forEach(function (e) {
+      var a = parseFecha(e.desde), b = e.hasta ? parseFecha(e.hasta) : a;
+      if (!a || !b) { errores.push('Día no laborable con fecha no válida: «' + (e.desde || '') + (e.hasta ? ' a ' + e.hasta : '') + '».'); return; }
+      if (b < a) { var x = a; a = b; b = x; }
+      if ((b - a) / 86400000 > 3660) { errores.push('El rango de días no laborables ' + fmt(a) + ' a ' + fmt(b) + ' es demasiado largo.'); return; }
+      for (var d = a; d <= b; d = addDays(d, 1)) {
+        var k = ymd(d);
+        if (!dias[k] || (dias[k].medio && !e.medio)) dias[k] = { medio: !!e.medio, motivo: String(e.motivo || '').trim() };
+      }
     });
     return { dias: dias, errores: errores };
   }
@@ -364,19 +448,21 @@ var CronoEngine = (function () {
         advertencias.push(hu.codigo + ' se programa después de sus dependencias aunque esté antes en la lista.');
     });
 
-    var noLab = parseNoLaborales(p.noLaborales);
+    var noLab = diasNoLaborales(p.noLaborales);
     errores = errores.concat(noLab.errores);
     if (errores.length) return { errores: errores, advertencias: advertencias };
 
-    function motivoNoLaboral(d) {
+    // null si es un día hábil completo; si no, { tipo: 'finde' | 'festivo' | 'nolab' | 'medio', motivo }
+    function calendario(d) {
       var dow = d.getUTCDay();
-      if (dow === 0 || dow === 6) return 'fin de semana';
+      if (dow === 0 || dow === 6) return { tipo: 'finde' };
       var k = ymd(d);
       if (p.festivosCO) {
         var f = festivosColombia(d.getUTCFullYear()).filter(function (x) { return x.fecha === k; })[0];
-        if (f) return 'Festivo: ' + f.nombre;
+        if (f) return { tipo: 'festivo', motivo: 'Festivo: ' + f.nombre };
       }
-      if (noLab.dias[k]) return 'Día no laborable';
+      var nl = noLab.dias[k];
+      if (nl) return nl.medio ? { tipo: 'medio', motivo: nl.motivo } : { tipo: 'nolab', motivo: nl.motivo ? 'No laborable: ' + nl.motivo : 'Día no laborable' };
       return null;
     }
 
@@ -397,19 +483,21 @@ var CronoEngine = (function () {
 
     while (pendienteTotal > EPS || colaHolgura.length) {
       if (++guard > 50000) { return { errores: ['El cronograma supera 50.000 días; revisa los datos.'], advertencias: advertencias }; }
-      var motivo = motivoNoLaboral(d);
-      if (motivo) {
-        if (motivo !== 'fin de semana') saltados.push({ fecha: ymd(d), motivo: motivo });
+      var cal = calendario(d);
+      if (cal && cal.tipo !== 'medio') {
+        if (cal.tipo !== 'finde') saltados.push({ fecha: ymd(d), motivo: cal.motivo, tipo: cal.tipo });
         d = addDays(d, 1); continue;
       }
+      // Medio día: cada desarrollador aporta 2 h (0,5 puntos)
+      var capDia = cal ? 0.5 : 1, medio = !!cal, motivoMedio = cal ? cal.motivo : '';
       if (colaHolgura.length) {
         var ch = colaHolgura[0], huH = porCodigo[ch];
         huH.diasHolgura++; huH.fin = ymd(d);
         if (huH.diasHolgura >= holguraHu[ch]) colaHolgura.shift();
         dias.push({
-          fecha: ymd(d), dia: DIAS[d.getUTCDay()], holgura: ch,
+          fecha: ymd(d), dia: DIAS[d.getUTCDay()], holgura: ch, medio: medio, motivo: motivoMedio,
           asignacion: new Array(devs).fill(0).map(function () { return [{ hu: ch, puntos: 0 }]; }),
-          horas: new Array(devs).fill(HORAS_POR_PUNTO), puntos: 0, restante: pendienteTotal
+          horas: new Array(devs).fill(HORAS_POR_PUNTO * capDia), puntos: 0, restante: pendienteTotal
         });
         d = addDays(d, 1); continue;
       }
@@ -425,7 +513,7 @@ var CronoEngine = (function () {
       // Último día de la última HU: las horas que quedan se reparten por igual entre todos los desarrolladores,
       // redondeando hacia abajo si la fracción es <= 0,5 y hacia arriba si es > 0,5
       var quedan = orden.filter(function (c) { return restante[c] > EPS; });
-      if (quedan.length === 1 && restante[quedan[0]] < devs - EPS) {
+      if (quedan.length === 1 && restante[quedan[0]] < devs * capDia - EPS) {
         var horasDev = redondeoMitadAbajo(restante[quedan[0]] * HORAS_POR_PUNTO / devs);
         if (horasDev > 0) {
           hoy[quedan[0]] = restante[quedan[0]];
@@ -433,7 +521,7 @@ var CronoEngine = (function () {
         }
       }
       for (var k = asign.length ? devs : 0; k < devs; k++) {
-        var cap = 1, trabajo = [];
+        var cap = capDia, trabajo = [];
         while (cap > EPS) {
           var c = ultimaHu[k] && disponible(ultimaHu[k]) ? ultimaHu[k] : orden.filter(disponible)[0];
           if (!c) break;
@@ -456,7 +544,7 @@ var CronoEngine = (function () {
       if (puntosDia <= EPS) return { errores: ['No fue posible asignar trabajo; revisa las dependencias.'], advertencias: advertencias };
       pendienteTotal = r2(pendienteTotal - puntosDia);
       dias.push({
-        fecha: ymd(d), dia: DIAS[d.getUTCDay()], asignacion: asign,
+        fecha: ymd(d), dia: DIAS[d.getUTCDay()], medio: medio, motivo: motivoMedio, asignacion: asign,
         horas: asign.map(function (t) { return r2(t.reduce(function (s, x) { return s + x.puntos; }, 0) * HORAS_POR_PUNTO); }),
         puntos: puntosDia, restante: pendienteTotal
       });
@@ -493,6 +581,7 @@ var CronoEngine = (function () {
 
   return {
     generar: generar, festivosColombia: festivosColombia, parseDeps: parseDeps, parseFecha: parseFecha,
+    parseNoLaborales: parseNoLaborales, textoNoLaborales: textoNoLaborales,
     etiquetaDia: etiquetaDia, fmt: fmt, ymd: ymd, HORAS_POR_PUNTO: HORAS_POR_PUNTO, DIAS: DIAS
   };
 })();
@@ -504,11 +593,11 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
   var E = CronoEngine;
   var CLAVE = 'cronoAI.v1';
   // Hoja oculta del Excel exportado con los datos del proyecto, para poder volver a abrirlo en la herramienta
-  var HOJA_DATOS = 'Datos cronoAI', VERSION_DATOS = 1;
+  var HOJA_DATOS = 'Datos cronoAI', VERSION_DATOS = 2;
   var PARAMETROS = ['proyecto', 'inicio', 'devs', 'holguraSemanas', 'festivosCO', 'noLaborales'];
   var EJEMPLO = {
     proyecto: 'Proyecto de ejemplo',
-    devs: 2, holguraSemanas: 0, festivosCO: true, noLaborales: '',
+    devs: 2, holguraSemanas: 0, festivosCO: true, noLaborales: [],
     hus: [
       { codigo: 'HU01', nombre: 'Ejemplo: registro de usuarios', puntos: 5, deps: 'No' },
       { codigo: 'HU02', nombre: 'Ejemplo: inicio de sesión', puntos: 5, deps: 'HU01' },
@@ -519,17 +608,28 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     ]
   };
 
+  // Tamaños de la línea de tiempo: ancho mínimo de cada día, alto de fila y tamaño de letra de las barras
+  var ZOOM = [{ cel: 24, fila: 24, fs: 10 }, { cel: 34, fila: 30, fs: 11 }, { cel: 46, fila: 36, fs: 12 }];
+  var CLAVE_ZOOM = 'cronoAI.zoom';
+
   var state = cargar();
   var resultado = null;
   var vista = 'hu';
+  var zoom = 1;
+  try { var z = localStorage.getItem(CLAVE_ZOOM); if (z !== null && ZOOM[+z]) zoom = +z; } catch (e) { /* sin almacenamiento */ }
   var $ = function (id) { return document.getElementById(id); };
 
   function cargar() {
     try {
       var s = JSON.parse(localStorage.getItem(CLAVE));
-      if (s && Array.isArray(s.hus)) return s;
+      if (s && Array.isArray(s.hus)) return normalizar(s);
     } catch (e) { /* sin almacenamiento disponible */ }
     return vacio();
+  }
+  // Antes los días no laborables eran texto (una fecha o rango por línea); ahora son una lista de entradas
+  function normalizar(s) {
+    if (!Array.isArray(s.noLaborales)) s.noLaborales = E.parseNoLaborales(s.noLaborales).entradas;
+    return s;
   }
   // Fecha de hoy en hora local del equipo
   function hoy() {
@@ -537,7 +637,7 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     return h.getFullYear() + '-' + ('0' + (h.getMonth() + 1)).slice(-2) + '-' + ('0' + h.getDate()).slice(-2);
   }
   function ejemplo() { var e = JSON.parse(JSON.stringify(EJEMPLO)); e.inicio = hoy(); return e; }
-  function vacio() { return { proyecto: '', inicio: hoy(), devs: 2, holguraSemanas: 0, festivosCO: true, noLaborales: '', hus: [] }; }
+  function vacio() { return { proyecto: '', inicio: hoy(), devs: 2, holguraSemanas: 0, festivosCO: true, noLaborales: [], hus: [] }; }
   function tieneHus(s) {
     return s.hus.some(function (h) { return [h.codigo, h.nombre, h.puntos].some(function (v) { return String(v == null ? '' : v).trim(); }); });
   }
@@ -546,7 +646,8 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function fmtF(s) { return s ? E.fmt(E.parseFecha(s)) : '—'; }
   function n(x) { return String(Math.round(x * 100) / 100).replace('.', ','); }
-  function colorHu(i) { return 'hsl(' + ((i * 137.5 + 205) % 360) + ' 55% 45%)'; }
+  // Sintaxis con comas para que el canvas del PNG también la entienda
+  function colorHu(i) { return 'hsl(' + ((i * 137.5 + 205) % 360) + ', 55%, 45%)'; }
 
   // ---------- Parámetros ----------
   function pintarParametros() {
@@ -555,12 +656,61 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     $('devs').value = state.devs;
     $('holguraSemanas').value = state.holguraSemanas || '';
     $('festivosCO').checked = state.festivosCO !== false;
-    $('noLaborales').value = state.noLaborales || '';
+    pintarNoLaborales();
   }
-  ['proyecto', 'inicio', 'devs', 'holguraSemanas', 'noLaborales'].forEach(function (id) {
+  ['proyecto', 'inicio', 'devs', 'holguraSemanas'].forEach(function (id) {
     $(id).addEventListener('input', function () { state[id] = $(id).value; cambio(); });
   });
   $('festivosCO').addEventListener('change', function () { state.festivosCO = $('festivosCO').checked; cambio(); });
+
+  // ---------- Días no laborables ----------
+  function textoRango(e) { return fmtF(e.desde) + (e.hasta && e.hasta !== e.desde ? ' – ' + fmtF(e.hasta) : ''); }
+  function describirNoLaboral(e) { return textoRango(e).replace(' – ', ' a ') + ' (' + (e.medio ? 'medio día' : 'día completo') + (e.motivo ? ', ' + e.motivo : '') + ')'; }
+  function pintarNoLaborales() {
+    $('nlLista').innerHTML = state.noLaborales.map(function (e, i) {
+      return '<li data-i="' + i + '"><span class="rango">' + textoRango(e) + '</span>' +
+        '<select data-nl="medio" aria-label="Tipo"><option value="">Día completo</option><option value="1"' + (e.medio ? ' selected' : '') + '>Medio día</option></select>' +
+        '<input data-nl="motivo" placeholder="Motivo" aria-label="Motivo" value="' + esc(e.motivo) + '">' +
+        '<button class="icon" data-nl-del title="Eliminar">✕</button></li>';
+    }).join('') || '<li class="vacio">Ninguno por ahora.</li>';
+  }
+  // Una entrada con las mismas fechas reemplaza a la anterior; la lista queda ordenada por fecha
+  function agregarNoLaboral(e) {
+    state.noLaborales = state.noLaborales.filter(function (x) { return !(x.desde === e.desde && (x.hasta || '') === e.hasta); }).concat([e]);
+    state.noLaborales.sort(function (a, b) { return a.desde < b.desde ? -1 : a.desde > b.desde ? 1 : 0; });
+    pintarNoLaborales(); cambio();
+  }
+  $('nlAdd').addEventListener('click', function () {
+    var a = $('nlDesde').value, b = $('nlHasta').value;
+    if (!a) { $('nlError').textContent = 'Elige la fecha del día (o el inicio del rango).'; $('nlDesde').focus(); return; }
+    if (b && b < a) { var x = a; a = b; b = x; }
+    agregarNoLaboral({ desde: a, hasta: b === a ? '' : b, medio: $('nlTipo').value === 'medio', motivo: $('nlMotivo').value.trim() });
+    $('nlError').textContent = '';
+    $('nlDesde').value = $('nlHasta').value = $('nlMotivo').value = ''; $('nlTipo').value = 'completo';
+    $('nlDesde').focus();
+  });
+  $('nlMotivo').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('nlAdd').click(); });
+  $('nlLista').addEventListener('input', function (e) {
+    var f = e.target.getAttribute('data-nl'); if (!f) return;
+    var ent = state.noLaborales[+e.target.closest('li').getAttribute('data-i')];
+    if (f === 'medio') ent.medio = !!e.target.value; else ent.motivo = e.target.value;
+    cambio();
+  });
+  $('nlLista').addEventListener('click', function (e) {
+    if (!e.target.hasAttribute('data-nl-del')) return;
+    state.noLaborales.splice(+e.target.closest('li').getAttribute('data-i'), 1);
+    pintarNoLaborales(); cambio();
+  });
+
+  function enRango(f) { return state.noLaborales.some(function (e) { return e.hasta && e.hasta !== e.desde && e.desde <= f && f <= e.hasta; }); }
+  // Clic en la fecha de un día de la línea de tiempo: hábil → medio día → no laborable → hábil
+  function alternarDia(f) {
+    var lst = state.noLaborales, i = -1;
+    lst.forEach(function (e, k) { if (i < 0 && e.desde === f && (!e.hasta || e.hasta === f)) i = k; });
+    if (i < 0) { agregarNoLaboral({ desde: f, hasta: '', medio: true, motivo: '' }); return; }
+    if (lst[i].medio) lst[i].medio = false; else lst.splice(i, 1);
+    pintarNoLaborales(); cambio();
+  }
 
   // ---------- Tabla de HU ----------
   function pintarHus() {
@@ -664,8 +814,9 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
       else if (PARAMETROS.indexOf(clave) >= 0) nuevo[clave] = valor(row.getCell(2));
     }
     nuevo.festivosCO = nuevo.festivosCO !== false && String(nuevo.festivosCO).toLowerCase() !== 'false';
+    nuevo.noLaborales = String(nuevo.noLaborales == null ? '' : nuevo.noLaborales);
     if (!nuevo.hus.length) { alert('El archivo no trae historias de usuario.'); return; }
-    state = nuevo; pintarParametros(); pintarHus(); cambio();
+    state = normalizar(nuevo); pintarParametros(); pintarHus(); cambio();
   }
 
   // ---------- Cálculo y resultados ----------
@@ -676,23 +827,28 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     resultado = E.generar(state);
     var total = state.hus.reduce(function (s, h) { var v = Number(String(h.puntos).replace(',', '.')); return s + (v > 0 ? v : 0); }, 0);
     $('huTotal').textContent = n(total);
+    var ok = tieneHus(state) && !resultado.errores.length;
+    $('btnExport').disabled = $('btnPng').disabled = !ok;
     if (!tieneHus(state)) {
       $('msgs').innerHTML = '<div class="info">Agrega tus historias de usuario (o pégalas desde Excel) para ver el cronograma. ¿Primera vez? Haz clic en «Tutorial».</div>';
-      $('btnExport').disabled = true;
-      ['cards', 'gantt', 'legend', 'sched', 'huSummary'].forEach(function (id) { $(id).innerHTML = ''; });
+    } else {
+      $('msgs').innerHTML = resultado.errores.map(function (m) { return '<div class="err">' + esc(m) + '</div>'; }).join('') +
+        resultado.advertencias.map(function (m) { return '<div class="warn">' + esc(m) + '</div>'; }).join('');
+    }
+    if (!ok) {
+      ['cards', 'legend', 'sched', 'huSummary'].forEach(function (id) { $(id).innerHTML = ''; });
+      $('gantt').innerHTML = '<div class="vacio">La línea de tiempo aparece aquí cuando las historias de usuario y los parámetros estén completos.</div>';
       return;
     }
-    $('msgs').innerHTML = resultado.errores.map(function (m) { return '<div class="err">' + esc(m) + '</div>'; }).join('') +
-      resultado.advertencias.map(function (m) { return '<div class="warn">' + esc(m) + '</div>'; }).join('');
-    var ok = !resultado.errores.length;
-    $('btnExport').disabled = !ok;
-    if (!ok) { ['cards', 'gantt', 'legend', 'sched', 'huSummary'].forEach(function (id) { $(id).innerHTML = ''; }); return; }
     pintarTarjetas(); pintarGantt(); pintarCronograma(); pintarResumenHu();
   }
 
   function pintarTarjetas() {
     var r = resultado, dias = r.dias, festivos = r.saltados.length;
+    var medios = dias.filter(function (d) { return d.medio; }).length;
     var cal = (E.parseFecha(dias[dias.length - 1].fecha) - E.parseFecha(dias[0].fecha)) / 86400000 + 1;
+    var subNoLab = [festivos ? 'en días de semana' : medios ? '' : 'ninguno en el rango', medios ? '+ ' + medios + (medios > 1 ? ' medios días' : ' medio día') : '']
+      .filter(Boolean).join(' · ');
     $('cards').innerHTML = [
       ['Inicio', fmtF(dias[0].fecha), dias[0].dia],
       ['Fin', fmtF(dias[dias.length - 1].fecha), dias[dias.length - 1].dia],
@@ -700,66 +856,280 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
       ['Puntos de historia', n(r.total), n(r.total * r.horasPorPunto) + ' horas'],
       ['Capacidad diaria', r.devs + ' pts', r.devs + ' dev × 4 h = ' + r.devs * 4 + ' h'],
       ['Holgura', r.diasHolgura + ' días', r.diasHolgura ? n(r.holguraSemanas) + ' semana(s) hábiles' : 'sin holgura'],
-      ['Días no laborables', festivos, festivos ? 'en días de semana' : 'ninguno en el rango']
+      ['Días no laborables', festivos, subNoLab]
     ].map(function (c) { return '<div class="card"><div class="k">' + c[0] + '</div><div class="v">' + c[1] + '</div><div class="s">' + c[2] + '</div></div>'; }).join('');
   }
 
-  function encabezadoGantt(dias) {
-    var meses = [], prev = null;
-    var MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-    dias.forEach(function (d) {
-      var m = d.fecha.slice(0, 7);
-      if (m !== prev) { meses.push({ m: m, n: 0 }); prev = m; }
-      meses[meses.length - 1].n++;
-    });
-    return '<tr><th class="lbl"></th>' + meses.map(function (x) {
-      return '<th class="mon" colspan="' + x.n + '">' + MES[+x.m.slice(5) - 1] + ' ' + x.m.slice(0, 4) + '</th>';
-    }).join('') + '</tr><tr><th class="lbl"></th>' + dias.map(function (d, i) {
-      return '<th class="day' + (esLunes(dias, i) ? ' wk' : '') + '" title="' + d.dia + ' ' + fmtF(d.fecha) + '">' + d.fecha.slice(8) + '<br>' + d.dia[0] + '</th>';
-    }).join('') + '</tr>';
-  }
   function esLunes(dias, i) { return i > 0 && E.parseFecha(dias[i].fecha).getUTCDay() <= E.parseFecha(dias[i - 1].fecha).getUTCDay(); }
 
-  function pintarGantt() {
-    var r = resultado, dias = r.dias;
-    var color = {}; r.hus.forEach(function (h, i) { color[h.codigo] = colorHu(i); });
+  // ---------- Línea de tiempo ----------
+  // Modelo común para la vista en pantalla y el PNG: columnas (días hábiles, medios días y días de semana no laborables)
+  // y filas (por historia o por desarrollador) con una celda por columna
+  var MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  function modeloGantt() {
+    var r = resultado, color = {}, cols = [], si = 0;
+    r.hus.forEach(function (h, i) { color[h.codigo] = colorHu(i); });
+    function col(fecha) { var dow = E.parseFecha(fecha).getUTCDay(); return { fecha: fecha, dow: dow, dia: E.DIAS[dow] }; }
+    r.dias.forEach(function (d) {
+      while (si < r.saltados.length && r.saltados[si].fecha < d.fecha) { var c = col(r.saltados[si].fecha); c.salto = r.saltados[si++]; cols.push(c); }
+      var c2 = col(d.fecha); c2.d = d; c2.medio = d.medio; cols.push(c2);
+    });
+    cols.forEach(function (c, i) { c.wk = i > 0 && c.dow <= cols[i - 1].dow; });
+
     var filas;
     if (vista === 'hu') {
       filas = r.orden.map(function (cod) {
-        return '<tr><td class="lbl">' + esc(cod) + '</td>' + dias.map(function (d, i) {
-          var quien = [], pts = 0;
-          d.asignacion.forEach(function (t, k) { t.forEach(function (x) { if (x.hu === cod) { quien.push('Dev.' + (k + 1)); pts += x.puntos; } }); });
-          var cls = 'c' + (esLunes(dias, i) ? ' wk' : '');
-          if (!quien.length) return '<td class="' + cls + '"></td>';
-          if (d.holgura) return '<td class="' + cls + '"><span class="bar hol" style="background-color:' + color[cod] + '" title="' + esc(cod) + ' · ' + d.dia + ' ' + fmtF(d.fecha) + ' · holgura">H</span></td>';
-          return '<td class="' + cls + '"><span class="bar" style="background:' + color[cod] + '" title="' + esc(cod) + ' · ' + d.dia + ' ' + fmtF(d.fecha) + ' · ' + quien.join(', ') + ' · ' + n(pts) + ' pts">' + n(pts) + '</span></td>';
-        }).join('') + '</tr>';
+        var h = r.hus.filter(function (x) { return x.codigo === cod; })[0];
+        return { lbl: cod, nom: h.nombre, celdas: cols.map(function (c) {
+          if (!c.d) return null;
+          var quien = [], pts = 0, base = cod + ' · ' + c.dia + ' ' + fmtF(c.fecha);
+          c.d.asignacion.forEach(function (t, k) { t.forEach(function (x) { if (x.hu === cod) { quien.push('Dev.' + (k + 1)); pts += x.puntos; } }); });
+          if (!quien.length) return null;
+          if (c.d.holgura) return { segs: [{ color: color[cod], peso: 1 }], hol: true, txt: 'H', title: base + ' · holgura' };
+          return { segs: [{ color: color[cod], peso: 1 }], txt: n(pts), title: base + ' · ' + quien.join(', ') + ' · ' + n(pts) + ' pts' };
+        }) };
       });
     } else {
       filas = [];
-      for (var k = 0; k < r.devs; k++) {
-        filas.push('<tr><td class="lbl">Developer ' + (k + 1) + '</td>' + dias.map(function (d, i) {
-          var t = d.asignacion[k], cls = 'c' + (esLunes(dias, i) ? ' wk' : '');
-          if (!t.length) return '<td class="' + cls + '" title="Sin asignación"></td>';
-          var bg = t.length === 1 ? color[t[0].hu] : 'linear-gradient(90deg,' + t.map(function (x) { return color[x.hu]; }).join(',') + ')';
-          var txt = d.holgura ? d.holgura + ' · holgura (4 h)' : t.map(function (x) { return x.hu + ' (' + n(x.puntos * 4) + ' h)'; }).join(' + ');
-          if (d.holgura) return '<td class="' + cls + '"><span class="bar hol" style="background-color:' + bg + '" title="' + esc(d.dia + ' ' + fmtF(d.fecha) + ' · ' + txt) + '">H</span></td>';
-          return '<td class="' + cls + '"><span class="bar" style="background:' + bg + '" title="' + esc(d.dia + ' ' + fmtF(d.fecha) + ' · ' + txt) + '">' + esc(t[0].hu.replace(/^\D+/, '')) + '</span></td>';
-        }).join('') + '</tr>');
-      }
+      for (var k = 0; k < r.devs; k++) filas.push({ lbl: 'Developer ' + (k + 1), nom: '', celdas: cols.map(function (c) {
+        if (!c.d) return null;
+        var t = c.d.asignacion[k], base = c.dia + ' ' + fmtF(c.fecha) + ' · ', horas = n(c.d.horas[k]);
+        if (!t.length) return null;
+        var segs = t.map(function (x) { return { color: color[x.hu], peso: x.puntos || 1 }; });
+        if (c.d.holgura) return { segs: segs, hol: true, txt: 'H', title: base + c.d.holgura + ' · holgura (' + horas + ' h)' };
+        return { segs: segs, txt: t[0].hu.replace(/^\D+/, ''), title: base + t.map(function (x) { return x.hu + ' (' + n(x.puntos * 4) + ' h)'; }).join(' + ') };
+      }) });
     }
-    $('gantt').innerHTML = '<table class="gantt">' + encabezadoGantt(dias) + filas.join('') + '</table>';
-    $('legend').innerHTML = r.hus.map(function (h) {
-      return '<span><span class="dot" style="background:' + color[h.codigo] + '"></span>' + esc(h.codigo + (h.nombre ? ' · ' + h.nombre : '')) + '</span>';
-    }).join('');
+
+    var leyenda = r.hus.map(function (h) { return { color: color[h.codigo], txt: h.codigo + (h.nombre ? ' · ' + h.nombre : '') }; });
+    if (r.diasHolgura) leyenda.push({ tipo: 'hol', txt: 'Holgura' });
+    if (cols.some(function (c) { return c.medio; })) leyenda.push({ tipo: 'medio', txt: 'Medio día (2 h por desarrollador)' });
+    if (r.saltados.length) leyenda.push({ tipo: 'salto', txt: 'Festivo o día no laborable' });
+    return { cols: cols, filas: filas, leyenda: leyenda };
   }
-  document.querySelectorAll('.tabs button').forEach(function (b) {
+  function mesesGantt(cols) {
+    var meses = [];
+    cols.forEach(function (c) {
+      var m = c.fecha.slice(0, 7);
+      if (!meses.length || meses[meses.length - 1].m !== m) meses.push({ m: m, n: 0, txt: MES[+m.slice(5) - 1] + ' ' + m.slice(0, 4) });
+      meses[meses.length - 1].n++;
+    });
+    return meses;
+  }
+  function fondoBarra(segs) {
+    if (segs.length === 1) return segs[0].color;
+    var total = segs.reduce(function (s, x) { return s + x.peso; }, 0), acum = 0;
+    return 'linear-gradient(90deg,' + segs.map(function (x) {
+      var a = acum / total * 100; acum += x.peso;
+      return x.color + ' ' + a + '% ' + (acum / total * 100) + '%';
+    }).join(',') + ')';
+  }
+  // Qué hace el clic en la fecha de cada columna (los festivos y los días dentro de un rango no se cambian desde aquí)
+  function infoDia(c) {
+    var base = c.dia + ' ' + fmtF(c.fecha) + ' · ';
+    if (c.salto && c.salto.tipo === 'festivo') return { title: base + c.salto.motivo };
+    var estado = c.salto ? c.salto.motivo : c.medio ? 'Medio día' + (c.d.motivo ? ': ' + c.d.motivo : '') : '';
+    if (enRango(c.fecha)) return { title: base + estado + ' · hace parte de un rango; edítalo en «Otros días no laborables»' };
+    if (c.salto) return { clic: true, title: base + estado + ' · clic para volverlo hábil' };
+    if (c.medio) return { clic: true, title: base + estado + ' · clic para marcarlo como no laborable' };
+    return { clic: true, title: base + 'clic para marcarlo como medio día' };
+  }
+
+  function pintarGantt() {
+    var m = modeloGantt(), cols = m.cols, z = ZOOM[zoom];
+    function cls(c) { return (c.wk ? ' wk' : '') + (c.salto ? ' salto' : '') + (c.medio ? ' medio' : ''); }
+    var head = '<tr><th class="lbl"></th>' + mesesGantt(cols).map(function (x) {
+      return '<th class="mon" colspan="' + x.n + '">' + x.txt + '</th>';
+    }).join('') + '</tr><tr><th class="lbl"></th>' + cols.map(function (c) {
+      var info = infoDia(c);
+      return '<th class="day' + cls(c) + (info.clic ? ' clic' : '') + '" data-f="' + c.fecha + '" title="' + esc(info.title) + '">' +
+        c.fecha.slice(8) + '<br>' + (c.medio ? '½' : c.dia[0]) + '</th>';
+    }).join('') + '</tr>';
+    var body = m.filas.map(function (f) {
+      return '<tr><td class="lbl" title="' + esc(f.lbl + (f.nom ? ' · ' + f.nom : '')) + '"><b>' + esc(f.lbl) + '</b>' +
+        (f.nom ? '<span class="nom">' + esc(f.nom) + '</span>' : '') + '</td>' +
+        f.celdas.map(function (x, i) {
+          var c = cols[i], td = '<td class="c' + cls(c) + '"';
+          if (!x) return td + (c.salto ? ' title="' + esc(c.salto.motivo) + '"' : '') + '></td>';
+          var fondo = x.hol ? 'background-color:' + x.segs[0].color : 'background:' + fondoBarra(x.segs);
+          return td + '><span class="bar' + (x.hol ? ' hol' : '') + '" style="' + fondo + '" title="' + esc(x.title) + '">' + esc(x.txt) + '</span></td>';
+        }).join('') + '</tr>';
+    }).join('');
+    $('gantt').innerHTML = '<table class="gantt" data-n="' + cols.length + '" style="--fila:' + z.fila + 'px;--fs:' + z.fs + 'px">' + head + body + '</table>';
+    $('legend').innerHTML = m.leyenda.map(function (it) {
+      var sw = it.tipo ? '<span class="sw ' + it.tipo + '"></span>' : '<span class="dot" style="background:' + it.color + '"></span>';
+      return '<span>' + sw + esc(it.txt) + '</span>';
+    }).join('');
+    ajustarGantt();
+    $('zoomMenos').disabled = zoom === 0; $('zoomMas').disabled = zoom === ZOOM.length - 1;
+  }
+  // Las columnas se estiran para ocupar el ancho disponible (hasta el doble del tamaño elegido); si no caben, hay scroll
+  function ajustarGantt() {
+    var t = $('gantt').querySelector('table.gantt'); if (!t) return;
+    var base = ZOOM[zoom].cel, lbl = t.querySelector('.lbl').offsetWidth, ncols = +t.getAttribute('data-n');
+    var cel = Math.max(base, Math.min(base * 2, Math.floor(($('gantt').clientWidth - lbl - 2) / ncols)));
+    t.style.setProperty('--cel', cel + 'px');
+  }
+  window.addEventListener('resize', ajustarGantt);
+  $('gantt').addEventListener('click', function (e) {
+    var th = e.target.closest('th.clic'); if (th) alternarDia(th.getAttribute('data-f'));
+  });
+  function cambiarZoom(delta) {
+    zoom = Math.max(0, Math.min(ZOOM.length - 1, zoom + delta));
+    try { localStorage.setItem(CLAVE_ZOOM, zoom); } catch (e) { /* ignorado */ }
+    if (resultado && !resultado.errores.length && tieneHus(state)) pintarGantt();
+  }
+  $('zoomMenos').addEventListener('click', function () { cambiarZoom(-1); });
+  $('zoomMas').addEventListener('click', function () { cambiarZoom(1); });
+  document.querySelectorAll('#tabsGantt button').forEach(function (b) {
     b.addEventListener('click', function () {
       vista = b.getAttribute('data-view');
-      document.querySelectorAll('.tabs button').forEach(function (x) { x.classList.toggle('on', x === b); });
-      if (resultado && !resultado.errores.length) pintarGantt();
+      document.querySelectorAll('#tabsGantt button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      if (resultado && !resultado.errores.length && tieneHus(state)) pintarGantt();
     });
   });
+  document.querySelectorAll('#tabsDetalle button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#tabsDetalle button').forEach(function (x) {
+        x.classList.toggle('on', x === b);
+        $(x.getAttribute('data-det')).hidden = x !== b;
+      });
+    });
+  });
+
+  // ---------- Exportar PNG de la línea de tiempo ----------
+  // Se dibuja a partir de los datos (no es una captura de pantalla), así sale completa aunque en pantalla tenga scroll
+  $('btnPng').addEventListener('click', function () {
+    try { exportarPng(); } catch (e) { alert('No se pudo generar la imagen: ' + e.message); }
+  });
+  function exportarPng() {
+    var m = modeloGantt(), cols = m.cols, r = resultado, dias = r.dias;
+    var C = { texto: '#1d2330', muted: '#5f6b7d', semana: '#b9c2d0', linea: '#eef0f3', saltoA: '#e3e6ec', saltoB: '#f3f4f7', medio: '#fff6e0', medioTxt: '#7a5300' };
+    var FUENTE = '"Segoe UI", system-ui, -apple-system, Roboto, sans-serif';
+    var P = 28, cel = Math.max(28, ZOOM[zoom].cel), fila = 30, hTitulo = 58, hMes = 22, hDia = 36, hLey = 20;
+    var medir = document.createElement('canvas').getContext('2d');
+
+    medir.font = '600 12px ' + FUENTE;
+    var lblW = 16 + Math.min(300, Math.max.apply(null, [80].concat(m.filas.map(function (f) {
+      return medir.measureText(f.lbl).width + (f.nom ? 6 + medir.measureText(f.nom).width : 0);
+    }))));
+    cel = Math.max(10, Math.min(cel, Math.floor((32000 - 2 * P - lblW) / cols.length)));
+    var W = Math.max(760, 2 * P + lblW + cols.length * cel);
+    // Leyenda en renglones que caben en el ancho de la imagen
+    medir.font = '12px ' + FUENTE;
+    var lx = 0, ly = 0, posLey = m.leyenda.map(function (it) {
+      var w = 22 + medir.measureText(it.txt).width + 18;
+      if (lx > 0 && lx + w > W - 2 * P) { lx = 0; ly += hLey; }
+      var p = { x: lx, y: ly }; lx += w; return p;
+    });
+    var x0 = P + lblW, yMes = P + hTitulo, yDia = yMes + hMes, y0 = yDia + hDia, yFin = y0 + m.filas.length * fila;
+    var H = yFin + 20 + ly + hLey + P;
+    var S = Math.max(W, H) * 2 <= 16000 ? 2 : 1;
+
+    var cv = document.createElement('canvas');
+    cv.width = Math.ceil(W * S); cv.height = Math.ceil(H * S);
+    var ctx = cv.getContext('2d');
+    ctx.scale(S, S);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = 'middle';
+
+    function texto(t, x, y, font, color, align) { ctx.font = font + ' ' + FUENTE; ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.fillText(t, x, y); }
+    function recortar(t, max) {
+      if (ctx.measureText(t).width <= max) return t;
+      while (t.length > 1 && ctx.measureText(t + '…').width > max) t = t.slice(0, -1);
+      return t + '…';
+    }
+    function rect(x, y, w, h, rad) {
+      ctx.beginPath(); ctx.moveTo(x + rad, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rad); ctx.arcTo(x + w, y + h, x, y + h, rad);
+      ctx.arcTo(x, y + h, x, y, rad); ctx.arcTo(x, y, x + w, y, rad); ctx.closePath();
+    }
+    function rayas(x, y, w, h, color, ancho) {
+      ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+      ctx.strokeStyle = color; ctx.lineWidth = ancho;
+      for (var k = -h; k < w + h; k += 7) { ctx.beginPath(); ctx.moveTo(x + k, y + h); ctx.lineTo(x + k + h, y); ctx.stroke(); }
+      ctx.restore();
+    }
+    function linea(xa, ya, xb, yb, color) { ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(xa, ya); ctx.lineTo(xb, yb); ctx.stroke(); }
+
+    // Título
+    texto(state.proyecto || 'Cronograma', P, P + 10, '600 20px', C.texto);
+    texto(fmtF(dias[0].fecha) + ' – ' + fmtF(dias[dias.length - 1].fecha) + ' · ' + dias.length + ' días hábiles · ' + n(r.total) + ' puntos de historia · ' +
+      r.devs + (r.devs > 1 ? ' desarrolladores' : ' desarrollador') + ' · Vista ' + (vista === 'hu' ? 'por historia' : 'por desarrollador'), P, P + 36, '13px', C.muted);
+
+    // Fondo de columnas especiales y líneas de filas
+    cols.forEach(function (c, i) {
+      var x = x0 + i * cel;
+      if (c.salto) { ctx.fillStyle = C.saltoB; ctx.fillRect(x, yDia, cel, yFin - yDia); rayas(x, yDia, cel, yFin - yDia, C.saltoA, 3); }
+      else if (c.medio) { ctx.fillStyle = C.medio; ctx.fillRect(x, yDia, cel, yFin - yDia); }
+    });
+    m.filas.forEach(function (f, j) { linea(P, y0 + (j + 1) * fila + 0.5, x0 + cols.length * cel, y0 + (j + 1) * fila + 0.5, C.linea); });
+
+    // Encabezado: meses y días
+    var ci = 0;
+    mesesGantt(cols).forEach(function (mes) {
+      var x = x0 + ci * cel;
+      linea(x + 0.5, yMes, x + 0.5, yDia, C.semana);
+      ctx.save(); ctx.beginPath(); ctx.rect(x, yMes, mes.n * cel, hMes); ctx.clip();
+      texto(mes.txt, x + 5, yMes + hMes / 2, '600 12px', C.texto);
+      ctx.restore();
+      ci += mes.n;
+    });
+    cols.forEach(function (c, i) {
+      var x = x0 + i * cel + cel / 2;
+      texto(c.fecha.slice(8), x, yDia + 11, (c.medio ? '600 ' : '') + '11px', c.medio ? C.medioTxt : c.salto ? C.muted : C.texto, 'center');
+      texto(c.medio ? '½' : c.dia[0], x, yDia + 26, (c.medio ? '600 ' : '') + '10px', c.medio ? C.medioTxt : C.muted, 'center');
+    });
+    cols.forEach(function (c, i) { if (c.wk) linea(x0 + i * cel + 0.5, yDia, x0 + i * cel + 0.5, yFin, C.semana); });
+
+    // Filas: etiqueta y barras
+    m.filas.forEach(function (f, j) {
+      var y = y0 + j * fila;
+      ctx.font = '600 12px ' + FUENTE;
+      var cod = recortar(f.lbl, lblW - 16);
+      texto(cod, P, y + fila / 2, '600 12px', C.texto);
+      if (f.nom) {
+        var wc = ctx.measureText(cod).width + 6;
+        ctx.font = '12px ' + FUENTE;
+        if (lblW - 16 - wc > 20) texto(recortar(f.nom, lblW - 16 - wc), P + wc, y + fila / 2, '12px', C.muted);
+      }
+      f.celdas.forEach(function (x, i) {
+        if (!x) return;
+        var bx = x0 + i * cel + 1, by = y + 4, bw = cel - 2, bh = fila - 8;
+        ctx.save(); rect(bx, by, bw, bh, 3); ctx.clip();
+        if (x.hol) ctx.globalAlpha = 0.75;
+        var total = x.segs.reduce(function (s, g) { return s + g.peso; }, 0), acum = 0;
+        x.segs.forEach(function (g) { ctx.fillStyle = g.color; ctx.fillRect(bx + bw * acum / total, by, bw * g.peso / total + 0.5, bh); acum += g.peso; });
+        if (x.hol) rayas(bx, by, bw, bh, 'rgba(255,255,255,.45)', 3);
+        ctx.restore();
+        ctx.font = '600 11px ' + FUENTE;
+        if (ctx.measureText(x.txt).width <= bw - 2) texto(x.txt, bx + bw / 2, by + bh / 2 + 0.5, '600 11px', '#ffffff', 'center');
+      });
+    });
+
+    // Leyenda
+    m.leyenda.forEach(function (it, i) {
+      var x = P + posLey[i].x, y = yFin + 20 + posLey[i].y + hLey / 2;
+      if (it.tipo === 'salto') { ctx.fillStyle = C.saltoB; ctx.fillRect(x, y - 5, 14, 10); rayas(x, y - 5, 14, 10, C.saltoA, 3); }
+      else if (it.tipo === 'medio') { ctx.fillStyle = C.medio; ctx.fillRect(x, y - 5, 14, 10); ctx.strokeStyle = '#e9d29a'; ctx.strokeRect(x + 0.5, y - 4.5, 13, 9); }
+      else if (it.tipo === 'hol') { ctx.save(); ctx.globalAlpha = 0.75; ctx.fillStyle = C.muted; ctx.fillRect(x, y - 5, 14, 10); rayas(x, y - 5, 14, 10, 'rgba(255,255,255,.45)', 3); ctx.restore(); }
+      else { ctx.fillStyle = it.color; rect(x, y - 5, 10, 10, 2); ctx.fill(); }
+      texto(it.txt, x + 22, y, '12px', C.muted);
+    });
+
+    cv.toBlob(function (blob) {
+      if (!blob) { alert('La línea de tiempo es demasiado grande para exportarla como imagen.'); return; }
+      descargar(blob, 'Línea de tiempo - ' + nombreArchivo() + '.png');
+    }, 'image/png');
+  }
+  function nombreArchivo() { return (state.proyecto || 'Proyecto').replace(/[\\/:*?"<>|]/g, ''); }
+  function descargar(blob, nombre) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nombre;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
 
   function pintarCronograma() {
     var r = resultado, devCols = '';
@@ -772,15 +1142,18 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
         filas.push('<tr class="skip"><td>' + fmtF(s.fecha) + '</td><td>' + E.DIAS[E.parseFecha(s.fecha).getUTCDay()] + '</td><td colspan="' + (r.devs + 3) + '">' + esc(s.motivo) + '</td></tr>');
       }
       d.horas.forEach(function (h, k) { totH[k] += h; });
-      var clases = (esLunes(r.dias, i) ? ' wk' : '') + (d.holgura ? ' hol' : '');
+      var clases = (esLunes(r.dias, i) ? ' wk' : '') + (d.holgura ? ' hol' : '') + (d.medio ? ' medio' : '');
       filas.push('<tr' + (clases ? ' class="' + clases.trim() + '"' : '') + '><td>' + fmtF(d.fecha) + '</td><td>' + d.dia + '</td>' +
         d.horas.map(function (h) { return '<td class="num">' + n(h) + '</td>'; }).join('') +
-        '<td class="hu">' + esc(E.etiquetaDia(d)) + '</td><td class="num">' + n(d.puntos) + '</td><td class="num">' + n(d.restante) + '</td></tr>');
+        '<td class="hu">' + esc(E.etiquetaDia(d)) + (d.medio ? '<span class="tag">' + esc(notaMedio(d)) + '</span>' : '') + '</td>' +
+        '<td class="num">' + n(d.puntos) + '</td><td class="num">' + n(d.restante) + '</td></tr>');
     });
     $('sched').innerHTML = '<thead><tr><th>Fecha</th><th>Día</th>' + devCols + '<th>HU</th><th class="num">Puntos planeados</th><th class="num">Puntos restantes</th></tr></thead>' +
       '<tbody>' + filas.join('') + '</tbody><tfoot><tr><td>TOTAL</td><td>' + r.dias.length + ' días</td>' +
       totH.map(function (h) { return '<td class="num">' + n(h) + '</td>'; }).join('') + '<td></td><td class="num">' + n(r.total) + '</td><td></td></tr></tfoot>';
   }
+
+  function notaMedio(d) { return 'Medio día' + (d.motivo ? ': ' + d.motivo : ''); }
 
   function pintarResumenHu() {
     var r = resultado;
@@ -866,7 +1239,9 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
       row.getCell(cHU).alignment = { wrapText: true, vertical: 'middle' };
       row.getCell(cObs).alignment = { wrapText: true, vertical: 'top' };
       cuerpo(row, cObs);
-      if (d.holgura) for (var c = 1; c <= cObs; c++) row.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE6EEF7' } };
+      if (d.medio) row.getCell(cObs).value = notaMedio(d);
+      var relleno = d.holgura ? 'FFE6EEF7' : d.medio ? 'FFFFF6E0' : null;
+      if (relleno) for (var c = 1; c <= cObs; c++) row.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: relleno } };
       if (esLunes(r.dias, i)) for (c = 1; c <= cObs; c++) row.getCell(c).border = Object.assign({}, bordes, { top: { style: 'medium', color: { argb: 'FF7F7F7F' } } });
     });
     var tot = ws.getRow(filaTotal);
@@ -893,8 +1268,8 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
       ['Total estimado', r.hus.length + ' HU, ' + n(r.total) + ' puntos de historia (' + n(r.total * 4) + ' horas).'],
       ['Fecha de inicio', fmtF(state.inicio) + (state.inicio !== dias[0].fecha ? ' (primer día hábil: ' + fmtF(dias[0].fecha) + ')' : '')],
       ['Calendario laboral', 'Lunes a viernes' + (state.festivosCO !== false ? '; se excluyen los festivos de Colombia (Ley 51 de 1983).' : '; sin exclusión de festivos.') +
-        (String(state.noLaborales || '').trim() ? ' Días no laborables adicionales: ' + String(state.noLaborales).trim().split(/\r?\n/).join('; ') + '.' : '')],
-      ['Días no laborables en la ventana', r.saltados.length ? r.saltados.map(function (s) { return fmtF(s.fecha) + ' (' + s.motivo.replace('Festivo: ', '') + ')'; }).join('; ') : 'Ninguno cae dentro del rango del proyecto.'],
+        (state.noLaborales.length ? ' Días no laborables adicionales: ' + state.noLaborales.map(describirNoLaboral).join('; ') + '.' : '')],
+      ['Días no laborables en la ventana', r.saltados.length ? r.saltados.map(function (s) { return fmtF(s.fecha) + ' (' + s.motivo.replace(/^(Festivo|No laborable): /, '') + ')'; }).join('; ') : 'Ninguno cae dentro del rango del proyecto.'],
       ['Orden de desarrollo', r.orden.join(' -> ') + '. Se respetan las dependencias declaradas.'],
       ['Regla de asignación diaria', 'Cada desarrollador continúa su HU; cuando a una HU le queda menos de un día de trabajo, un desarrollador la termina y los demás arrancan el mismo día la siguiente HU, para no perder capacidad. En el último día de la última HU, las horas que quedan se dividen por igual entre los desarrolladores, redondeando hacia abajo si la fracción es menor o igual a 0,5 y hacia arriba si es mayor.'],
       ['Holgura', r.diasHolgura ? n(r.holguraSemanas) + ' semana(s) = ' + r.diasHolgura + ' días hábiles (1 semana = 5 días hábiles), repartidos por igual entre las HU: ' +
@@ -903,6 +1278,9 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
       ['Puntos ejecutados / Restantes reales / Observación', 'Se dejan en blanco: el equipo los diligencia día a día durante la ejecución real del proyecto.'],
       ['Volver a abrir el proyecto', 'Este archivo trae una hoja oculta («' + HOJA_DATOS + '») con los parámetros y las historias de usuario. Para retomar o ajustar el cronograma, ábrelo en la herramienta con «Abrir Excel».']
     ];
+    var medios = dias.filter(function (d) { return d.medio; });
+    if (medios.length) notas.splice(6, 0, ['Medios días', 'En un medio día cada desarrollador aporta 2 horas (0,5 puntos de historia). Dentro del proyecto: ' +
+      medios.map(function (d) { return fmtF(d.fecha) + (d.motivo ? ' (' + d.motivo + ')' : ''); }).join('; ') + '.']);
     r.advertencias.forEach(function (a) { notas.push(['Advertencia', a]); });
     notas.forEach(function (x, i) {
       var row = ws3.getRow(3 + i); row.values = x;
@@ -928,7 +1306,7 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     var wsD = wb.addWorksheet(HOJA_DATOS, { state: 'hidden' });
     wsD.columns = [{ width: 18 }, { width: 40 }, { width: 12 }, { width: 24 }];
     wsD.addRow(['cronoAI', VERSION_DATOS, 'No modificar: permite volver a abrir este proyecto en la herramienta.']);
-    PARAMETROS.forEach(function (k) { wsD.addRow([k, state[k] == null ? '' : state[k]]); });
+    PARAMETROS.forEach(function (k) { wsD.addRow([k, k === 'noLaborales' ? E.textoNoLaborales(state.noLaborales) : state[k] == null ? '' : state[k]]); });
     wsD.addRow([]);
     wsD.addRow(['Código', 'Nombre', 'Puntos', 'Dependencias']).font = { bold: true };
     state.hus.forEach(function (h) { wsD.addRow([h.codigo, h.nombre, h.puntos, h.deps]); });
@@ -936,12 +1314,7 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     wb.views = [{ activeTab: 1 }];
     wb.calcProperties.fullCalcOnLoad = true;
     return wb.xlsx.writeBuffer().then(function (buf) {
-      var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'Cronograma - ' + titulo.replace(/[\\/:*?"<>|]/g, '') + '.xlsx';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      descargar(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'Cronograma - ' + nombreArchivo() + '.xlsx');
     });
   }
 
@@ -949,16 +1322,17 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
   // Si no hay historias, el recorrido carga el ejemplo para mostrar resultados; al final se elige si se conserva
   var CLAVE_TOUR = 'cronoAI.tutorial';
   var PASOS = [
-    { t: 'Bienvenido a CronoAI', x: 'En un minuto te mostramos cómo armar el cronograma de un proyecto a partir de sus historias de usuario. Puedes saltar el tutorial cuando quieras y repetirlo con el botón «Tutorial».' },
+    { t: 'Bienvenido a CronoAI', x: 'En un minuto te mostramos cómo armar el cronograma de un proyecto a partir de sus historias de usuario. Arriba verás el resultado y abajo, los datos del proyecto. Puedes saltar el tutorial cuando quieras y repetirlo con el botón «Tutorial».' },
     { el: ['fEquipo'], t: 'Fecha de inicio y equipo', x: 'Indica cuándo arranca el desarrollo y cuántos desarrolladores tienes. Cada desarrollador aporta 4 horas al día, es decir, 1 punto de historia por día.' },
     { el: ['fHolgura'], t: 'Holgura', x: 'Si quieres extender el proyecto, agrega semanas de holgura. 1 semana = 5 días hábiles; se reparten por igual entre las historias y cada una los recibe justo después de terminar.' },
-    { el: ['fFestivos', 'fNoLaborales'], t: 'Calendario', x: 'Se trabaja de lunes a viernes. Puedes excluir los festivos de Colombia y agregar otros días no laborables, como vacaciones colectivas, una fecha o un rango por línea.' },
+    { el: ['fFestivos', 'fNoLaborales'], t: 'Calendario y medios días', x: 'Se trabaja de lunes a viernes y puedes excluir los festivos de Colombia. Para otros días no laborables elige la fecha (o un rango), el tipo —día completo o medio día— y pulsa «+ Agregar». En un medio día cada desarrollador trabaja 2 horas.' },
     { el: ['tblHus'], t: 'Historias de usuario', x: 'Cada historia lleva código, nombre, puntos y dependencias. Si una depende de otra, arranca el mismo día en que termina su predecesora (flujo continuo). Para este recorrido cargamos un proyecto de ejemplo.' },
-    { el: ['barHus'], t: 'Cargar tus historias', x: 'Agrégalas una a una, pégalas desde Excel (Código, Nombre, Puntos, Dependencias) o abre un Excel. Si abres un Excel exportado por esta herramienta, se recupera el proyecto completo.' },
+    { el: ['barHus'], t: 'Cargar tus historias', x: 'Agrégalas una a una o pégalas desde Excel (Código, Nombre, Puntos, Dependencias). También puedes usar «Abrir Excel», arriba a la derecha.' },
     { el: ['pnlResultado'], t: 'Resultado al instante', x: 'Cada cambio recalcula el cronograma: inicio, fin, días hábiles, holgura y avisos si algo no cuadra.' },
-    { el: ['btnExport'], t: 'Descargar Excel', x: 'Genera el cronograma en Excel para compartirlo. Guárdalo: con «Abrir Excel» puedes retomarlo o ajustarlo después.' },
-    { el: ['pnlGantt'], t: 'Línea de tiempo', x: 'Mira el avance por historia o por desarrollador. Las barras rayadas con «H» son días de holgura.' },
-    { el: ['pnlSched'], t: 'Cronograma diario', x: 'El detalle día por día: horas de cada desarrollador, historia en curso y puntos restantes. Los festivos aparecen como días sin trabajo.' },
+    { el: ['pnlGantt'], t: 'Línea de tiempo', x: 'Mira el avance por historia o por desarrollador. Con − y + cambias el tamaño y con «Descargar PNG» guardas la línea de tiempo completa como imagen. Las barras rayadas con «H» son días de holgura.' },
+    { el: ['ganttAyuda', 'gantt'], t: 'Medios días con un clic', x: 'Haz clic en la fecha de un día: el primer clic lo marca como medio día, el segundo como no laborable y el tercero lo deja hábil otra vez. El cambio también queda en la lista de días no laborables.' },
+    { el: ['pnlDetalle'], t: 'Cronograma diario y resumen', x: 'El detalle día por día: horas de cada desarrollador, historia en curso y puntos restantes; los festivos aparecen como días sin trabajo. En la otra pestaña está el resumen por historia.' },
+    { el: ['acciones'], t: 'Abrir y descargar Excel', x: 'Descarga el cronograma en Excel para compartirlo y guárdalo: con «Abrir Excel» lo retomas o ajustas después, porque el archivo trae todo el proyecto.' },
     { t: '¡Listo!', x: 'Puedes repetir este recorrido cuando quieras con el botón «Tutorial».', fin: true }
   ];
   var tour = { i: 0, antes: null };
