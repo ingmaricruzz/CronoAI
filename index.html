@@ -33,8 +33,25 @@
   .acciones { display: flex; gap: 8px; flex-wrap: wrap; }
   main { padding: 12px 24px 32px; }
   main > * + * { margin-top: 16px; }
-  .cols { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1.6fr); gap: 16px; align-items: start; }
-  @media (max-width: 1000px) { .cols { grid-template-columns: 1fr; } main { padding: 12px 16px 24px; } header { padding: 16px 16px 4px; } }
+  .cols { display: grid; grid-template-columns: minmax(300px, 0.85fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+  .entradas { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .preview { position: sticky; top: 12px; align-self: start; display: flex; flex-direction: column; max-height: calc(100vh - 24px); min-width: 0; }
+  .preview-body .panel { box-shadow: 0 2px 10px rgba(29, 35, 48, .08); border-color: #cfd6e2; }
+  .preview-body { overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 16px; padding-right: 4px; min-height: 0; }
+  .paso-num { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; margin-right: 6px; vertical-align: 1px; }
+  .paso-sub { margin-top: -6px; margin-bottom: 14px; }
+  #btnVerPreview { display: none; }
+  @media (max-width: 1000px) {
+    .cols { grid-template-columns: 1fr; }
+    main { padding: 12px 16px 24px; }
+    header { padding: 16px 16px 4px; }
+    .preview { position: static; max-height: none; }
+    .preview-body { overflow: visible; padding-right: 0; }
+    #btnVerPreview:not([hidden]) { display: block; position: fixed; right: 16px; bottom: 16px; z-index: 500;
+      background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 6px 18px rgba(0,0,0,.25);
+      padding: 10px 16px; font-weight: 600; }
+  }
   .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; min-width: 0; }
   h2 { font-size: 15px; margin: 0 0 12px; }
   label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
@@ -163,107 +180,121 @@
   <div class="acciones" id="acciones">
     <button id="btnImport" title="Abre un Excel exportado por esta herramienta (recupera todo el proyecto) o cualquier Excel con columnas Código y Puntos de historia (sólo las historias)">Abrir Excel</button>
     <input id="fileImport" type="file" accept=".xlsx" hidden>
-    <button class="primary" id="btnExport">Descargar Excel</button>
+    <button class="primary" id="btnExport" title="Descarga el proyecto completo en Excel">Descargar Excel</button>
+    <button id="btnBorrar" title="Borra las historias y los parámetros para empezar un proyecto nuevo">Borrar todo</button>
     <button id="btnTour" title="Recorrido guiado por la herramienta">Tutorial</button>
   </div>
 </header>
 
 <main>
-  <div class="panel" id="pnlResultado">
-    <div class="msgs" id="msgs"></div>
-    <div class="cards" id="cards"></div>
-  </div>
-
-  <div class="panel" id="pnlGantt">
-    <div class="cabecera">
-      <h2>Línea de tiempo</h2>
-      <div class="tabs" id="tabsGantt">
-        <button data-view="hu" class="on">Por historia</button>
-        <button data-view="dev">Por desarrollador</button>
-      </div>
-      <div class="der">
-        <div class="zoom" role="group" aria-label="Tamaño de la línea de tiempo">
-          <button id="zoomMenos" title="Reducir la línea de tiempo">−</button>
-          <button id="zoomMas" title="Ampliar la línea de tiempo">+</button>
-        </div>
-        <button id="btnPng" title="Descarga la línea de tiempo completa como imagen">Descargar PNG</button>
-      </div>
-    </div>
-    <div class="hint" id="ganttAyuda">Haz clic en la fecha de un día para marcarlo como <b>medio día</b>; un segundo clic lo vuelve <b>no laborable</b> y un tercero lo deja hábil otra vez.</div>
-    <div class="scroll" id="gantt"></div>
-    <div class="legend" id="legend"></div>
-    <div id="tip" role="tooltip" hidden></div>
-  </div>
-
   <div class="cols">
-    <div class="panel" id="pnlParams">
-      <h2>Parámetros</h2>
-      <div class="field">
-        <label for="proyecto">Proyecto</label>
-        <input id="proyecto" placeholder="Nombre del proyecto">
+    <!-- Columna izquierda: entradas del proyecto (se recorre de arriba hacia abajo) -->
+    <div class="entradas" id="entradas">
+      <div class="panel" id="pnlHus">
+        <h2><span class="paso-num">1</span> Historias de usuario</h2>
+        <div class="hint paso-sub">Empieza aquí: agrega la estimación de cada historia (o pégalas desde Excel).</div>
+        <div class="scroll" id="tblHus">
+          <table class="hu-table">
+            <thead><tr><th>Código</th><th>Nombre</th><th>Puntos</th><th>Dependencias</th><th></th></tr></thead>
+            <tbody id="huBody"></tbody>
+            <tfoot><tr><td></td><td class="num"><b>Total</b></td><td class="num" id="huTotal"></td><td colspan="2"></td></tr></tfoot>
+          </table>
+        </div>
+        <div class="hint">Dependencias: códigos separados por coma o «y» (p. ej. «HU01, HU02 y HU03»), o «No». Flujo continuo: la HU dependiente arranca el mismo día en que se termina su predecesora (p. ej. «HU01 (Dev.1) / HU02 (Dev.2)»).</div>
+        <div class="toolbar" id="barHus">
+          <button id="btnAdd">+ Agregar HU</button>
+          <button id="btnPaste">Pegar desde Excel</button>
+          <button id="btnReset" title="Reemplaza los datos actuales por el proyecto de ejemplo">Cargar ejemplo</button>
+        </div>
       </div>
-      <div class="grid2" id="fEquipo">
+
+      <div class="panel" id="pnlParams">
+        <h2><span class="paso-num">2</span> Parámetros del proyecto</h2>
+        <div class="hint paso-sub">Fecha de inicio, equipo, holgura y días no laborables.</div>
         <div class="field">
-          <label for="inicio">Fecha de inicio</label>
-          <input id="inicio" type="date">
+          <label for="proyecto">Proyecto</label>
+          <input id="proyecto" placeholder="Nombre del proyecto">
         </div>
-        <div class="field">
-          <label for="devs">Número de desarrolladores</label>
-          <input id="devs" type="number" min="1" max="50" step="1">
+        <div class="grid2" id="fEquipo">
+          <div class="field">
+            <label for="inicio">Fecha de inicio</label>
+            <input id="inicio" type="date">
+          </div>
+          <div class="field">
+            <label for="devs">Número de desarrolladores</label>
+            <input id="devs" type="number" min="1" max="50" step="1">
+          </div>
         </div>
-      </div>
-      <div class="field" id="fHolgura">
-        <label for="holguraSemanas">Holgura (semanas)</label>
-        <input id="holguraSemanas" type="number" min="0" step="0.2" inputmode="decimal" placeholder="0">
-        <div class="hint">1 semana = 5 días hábiles (lunes a viernes; los festivos y días no laborables no cuentan). Los días se reparten por igual entre las HU y cada HU los recibe justo después de terminar.</div>
-      </div>
-      <div class="field" id="fFestivos">
-        <label class="check"><input id="festivosCO" type="checkbox"> Excluir festivos de Colombia (Ley Emiliani, calculados para cualquier año)</label>
-      </div>
-      <div class="field" id="fNoLaborales">
-        <div class="lbl-grupo">Otros días no laborables (vacaciones colectivas, días de la empresa, medios días…)</div>
-        <div class="nl-form">
-          <div><label for="nlDesde">Fecha (o inicio del rango)</label><input id="nlDesde" type="date"></div>
-          <div><label for="nlHasta">Hasta (opcional)</label><input id="nlHasta" type="date"></div>
-          <div><label for="nlTipo">Tipo</label>
-            <select id="nlTipo"><option value="completo">Día completo</option><option value="medio">Medio día (2 h por desarrollador)</option></select></div>
-          <div><label for="nlMotivo">Motivo (opcional)</label><input id="nlMotivo" placeholder="p. ej. Nochebuena"></div>
+        <div class="field" id="fHolgura">
+          <label for="holguraSemanas">Holgura (semanas)</label>
+          <input id="holguraSemanas" type="number" min="0" step="0.2" inputmode="decimal" placeholder="0">
+          <div class="hint">1 semana = 5 días hábiles (lunes a viernes; los festivos y días no laborables no cuentan). Los días se reparten por igual entre las HU y cada HU los recibe justo después de terminar.</div>
         </div>
-        <div class="toolbar">
-          <button id="nlAdd">+ Agregar</button>
-          <span class="hint" id="nlError" role="alert"></span>
+        <div class="field" id="fFestivos">
+          <label class="check"><input id="festivosCO" type="checkbox"> Excluir festivos de Colombia (Ley Emiliani, calculados para cualquier año)</label>
         </div>
-        <ul class="nl-lista" id="nlLista"></ul>
-        <div class="hint">Atajo: en la línea de tiempo, haz clic en la fecha de un día para marcarlo como medio día o no laborable.</div>
+        <div class="field" id="fNoLaborales">
+          <div class="lbl-grupo">Otros días no laborables (vacaciones colectivas, días de la empresa, medios días…)</div>
+          <div class="nl-form">
+            <div><label for="nlDesde">Fecha (o inicio del rango)</label><input id="nlDesde" type="date"></div>
+            <div><label for="nlHasta">Hasta (opcional)</label><input id="nlHasta" type="date"></div>
+            <div><label for="nlTipo">Tipo</label>
+              <select id="nlTipo"><option value="completo">Día completo</option><option value="medio">Medio día (2 h por desarrollador)</option></select></div>
+            <div><label for="nlMotivo">Motivo (opcional)</label><input id="nlMotivo" placeholder="p. ej. Nochebuena"></div>
+          </div>
+          <div class="toolbar">
+            <button id="nlAdd">+ Agregar</button>
+            <span class="hint" id="nlError" role="alert"></span>
+          </div>
+          <ul class="nl-lista" id="nlLista"></ul>
+          <div class="hint">Atajo: en la línea de tiempo, haz clic en la fecha de un día para marcarlo como medio día o no laborable.</div>
+        </div>
       </div>
     </div>
 
-    <div class="panel" id="pnlHus">
-      <h2>Historias de usuario</h2>
-      <div class="scroll" id="tblHus">
-        <table class="hu-table">
-          <thead><tr><th>Código</th><th>Nombre</th><th>Puntos</th><th>Dependencias</th><th></th></tr></thead>
-          <tbody id="huBody"></tbody>
-          <tfoot><tr><td></td><td class="num"><b>Total</b></td><td class="num" id="huTotal"></td><td colspan="2"></td></tr></tfoot>
-        </table>
-      </div>
-      <div class="hint">Dependencias: códigos separados por coma o «y» (p. ej. «HU01, HU02 y HU03»), o «No». Flujo continuo: la HU dependiente arranca el mismo día en que se termina su predecesora (p. ej. «HU01 (Dev.1) / HU02 (Dev.2)»).</div>
-      <div class="toolbar" id="barHus">
-        <button id="btnAdd">+ Agregar HU</button>
-        <button id="btnPaste">Pegar desde Excel</button>
-        <button id="btnReset" title="Reemplaza los datos actuales por el proyecto de ejemplo">Cargar ejemplo</button>
+    <!-- Columna derecha: vista previa fija que se actualiza en vivo -->
+    <div class="preview" id="pnlVistaPrevia">
+      <div class="preview-body">
+        <div class="panel" id="pnlResultado">
+          <h2><span class="paso-num">3</span> Cronograma</h2>
+          <div class="msgs" id="msgs"></div>
+          <div class="cards" id="cards"></div>
+        </div>
+
+        <div class="panel" id="pnlGantt">
+          <div class="cabecera">
+            <h2>Línea de tiempo</h2>
+            <div class="tabs" id="tabsGantt">
+              <button data-view="hu" class="on">Por historia</button>
+              <button data-view="dev">Por desarrollador</button>
+            </div>
+            <div class="der">
+              <div class="zoom" role="group" aria-label="Tamaño de la línea de tiempo">
+                <button id="zoomMenos" title="Reducir la línea de tiempo">−</button>
+                <button id="zoomMas" title="Ampliar la línea de tiempo">+</button>
+              </div>
+              <button id="btnPng" title="Descarga la línea de tiempo completa como imagen">Descargar PNG</button>
+            </div>
+          </div>
+          <div class="hint" id="ganttAyuda">Haz clic en la fecha de un día para marcarlo como <b>medio día</b>; un segundo clic lo vuelve <b>no laborable</b> y un tercero lo deja hábil otra vez.</div>
+          <div class="scroll" id="gantt"></div>
+          <div class="legend" id="legend"></div>
+          <div id="tip" role="tooltip" hidden></div>
+        </div>
+
+        <div class="panel" id="pnlDetalle">
+          <div class="tabs" id="tabsDetalle">
+            <button data-det="detSched" class="on">Cronograma diario</button>
+            <button data-det="detRes">Resumen por historia</button>
+          </div>
+          <div class="det" id="detSched"><table class="sched" id="sched"></table></div>
+          <div class="det" id="detRes" hidden><table id="huSummary"></table></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="panel" id="pnlDetalle">
-    <div class="tabs" id="tabsDetalle">
-      <button data-det="detSched" class="on">Cronograma diario</button>
-      <button data-det="detRes">Resumen por historia</button>
-    </div>
-    <div class="det" id="detSched"><table class="sched" id="sched"></table></div>
-    <div class="det" id="detRes" hidden><table id="huSummary"></table></div>
-  </div>
+  <button id="btnVerPreview" type="button" hidden>Ver cronograma ↓</button>
 </main>
 
 <div id="tour" hidden>
@@ -397,10 +428,17 @@ var CronoEngine = (function () {
     return { dias: dias, errores: errores };
   }
 
+  // Palabras de relleno que NO son códigos de historia (frases como «no tiene», «sin dependencias», «no aplica»).
+  // Se descartan para no confundirlas con códigos; un código real inexistente (p. ej. HU99) sí sigue avisando.
+  var RELLENO_DEP = { 'no': 1, 'ni': 1, 'ninguna': 1, 'ninguno': 1, 'ningun': 1, 'ningún': 1, 'sin': 1, 'tiene': 1, 'tienen': 1,
+    'aplica': 1, 'depende': 1, 'dependen': 1, 'dependencia': 1, 'dependencias': 1, 'de': 1, 'del': 1, 'la': 1, 'el': 1,
+    'los': 1, 'las': 1, 'na': 1, 'nada': 1, 'hay': 1, 'requiere': 1, 'ninguna.': 1 };
   function parseDeps(s) {
     s = String(s == null ? '' : s).trim();
-    if (/^(no|ninguna?|n\/a|-|—)?$/i.test(s)) return [];
-    return s.split(/\s*(?:,|;|&|\/|\by\b|\be\b|\s)\s*/i).map(function (x) { return x.trim(); }).filter(Boolean);
+    if (/^(n\/?a|-|—|–)$/i.test(s)) return [];
+    return s.split(/\s*(?:,|;|&|\/|\by\b|\be\b|\s)\s*/i)
+      .map(function (x) { return x.trim(); })
+      .filter(function (x) { return x && !RELLENO_DEP[x.toLowerCase()]; });
   }
 
   function generar(p) {
@@ -750,6 +788,11 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     if (tieneHus(state) && !confirm('¿Reemplazar los datos actuales por el proyecto de ejemplo?')) return;
     state = ejemplo(); pintarParametros(); pintarHus(); cambio();
   });
+  $('btnBorrar').addEventListener('click', function () {
+    if (tieneHus(state) && !confirm('¿Borrar las historias y los parámetros para empezar un proyecto nuevo?')) return;
+    state = vacio(); pintarParametros(); pintarHus(); cambio();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 
   // Pegar desde Excel (texto separado por tabulaciones)
   $('btnPaste').addEventListener('click', function () { $('pasteArea').value = ''; $('dlgPaste').showModal(); });
@@ -771,6 +814,7 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
 
   // Importar .xlsx: busca la hoja con encabezados Código / Puntos
   $('btnImport').addEventListener('click', function () { $('fileImport').click(); });
+  $('btnVerPreview').addEventListener('click', function () { $('pnlVistaPrevia').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   $('fileImport').addEventListener('change', function () {
     var file = this.files[0]; this.value = '';
     if (!file) return;
@@ -837,6 +881,7 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
     $('huTotal').textContent = n(total);
     var ok = tieneHus(state) && !resultado.errores.length;
     $('btnExport').disabled = $('btnPng').disabled = !ok;
+    $('btnVerPreview').hidden = !ok;
     if (!tieneHus(state)) {
       $('msgs').innerHTML = '<div class="info">Agrega tus historias de usuario (o pégalas desde Excel) para ver el cronograma. ¿Primera vez? Haz clic en «Tutorial».</div>';
     } else {
@@ -1372,17 +1417,17 @@ if (typeof module !== 'undefined') module.exports = CronoEngine;
   // Si no hay historias, el recorrido carga el ejemplo para mostrar resultados; al final se elige si se conserva
   var CLAVE_TOUR = 'cronoAI.tutorial';
   var PASOS = [
-    { t: 'Bienvenido a CronoAI', x: 'En un minuto te mostramos cómo armar el cronograma de un proyecto a partir de sus historias de usuario. Arriba verás el resultado y abajo, los datos del proyecto. Puedes saltar el tutorial cuando quieras y repetirlo con el botón «Tutorial».' },
-    { el: ['fEquipo'], t: 'Fecha de inicio y equipo', x: 'Indica cuándo arranca el desarrollo y cuántos desarrolladores tienes. Cada desarrollador aporta 4 horas al día, es decir, 1 punto de historia por día.' },
+    { t: 'Bienvenido a CronoAI', x: 'En un minuto te mostramos cómo armar el cronograma de un proyecto a partir de sus historias de usuario. A la izquierda ingresas los datos del proyecto y a la derecha ves el cronograma actualizándose en vivo. Puedes saltar el tutorial cuando quieras y repetirlo con el botón «Tutorial».' },
+    { el: ['pnlHus'], t: 'Paso 1 · Historias de usuario', x: 'Empieza aquí. Cada historia lleva código, nombre, puntos y dependencias. Si una depende de otra, arranca el mismo día en que termina su predecesora (flujo continuo). Para este recorrido cargamos un proyecto de ejemplo.' },
+    { el: ['barHus'], t: 'Cargar tus historias', x: 'Agrégalas una a una o pégalas desde Excel (Código, Nombre, Puntos, Dependencias). También puedes usar «Abrir Excel», arriba a la derecha.' },
+    { el: ['fEquipo'], t: 'Paso 2 · Inicio y equipo', x: 'Indica cuándo arranca el desarrollo y cuántos desarrolladores tienes. Cada desarrollador aporta 4 horas al día, es decir, 1 punto de historia por día.' },
     { el: ['fHolgura'], t: 'Holgura', x: 'Si quieres extender el proyecto, agrega semanas de holgura. 1 semana = 5 días hábiles; se reparten por igual entre las historias y cada una los recibe justo después de terminar.' },
     { el: ['fFestivos', 'fNoLaborales'], t: 'Calendario y medios días', x: 'Se trabaja de lunes a viernes y puedes excluir los festivos de Colombia. Para otros días no laborables elige la fecha (o un rango), el tipo —día completo o medio día— y pulsa «+ Agregar». En un medio día cada desarrollador trabaja 2 horas.' },
-    { el: ['tblHus'], t: 'Historias de usuario', x: 'Cada historia lleva código, nombre, puntos y dependencias. Si una depende de otra, arranca el mismo día en que termina su predecesora (flujo continuo). Para este recorrido cargamos un proyecto de ejemplo.' },
-    { el: ['barHus'], t: 'Cargar tus historias', x: 'Agrégalas una a una o pégalas desde Excel (Código, Nombre, Puntos, Dependencias). También puedes usar «Abrir Excel», arriba a la derecha.' },
-    { el: ['pnlResultado'], t: 'Resultado al instante', x: 'Cada cambio recalcula el cronograma: inicio, fin, días hábiles, holgura y avisos si algo no cuadra.' },
-    { el: ['pnlGantt'], t: 'Línea de tiempo', x: 'Mira el avance por historia o por desarrollador. Con − y + cambias el tamaño y con «Descargar PNG» guardas la línea de tiempo completa como imagen. Las barras rayadas con «H» son días de holgura.' },
+    { el: ['pnlResultado'], t: 'Paso 3 · Resumen al instante', x: 'A la derecha, en la vista previa fija, cada cambio recalcula el cronograma: inicio, fin, días hábiles, holgura y avisos si algo no cuadra. No tienes que desplazarte: siempre está a la vista.' },
+    { el: ['pnlGantt'], t: 'Línea de tiempo', x: 'Mira el avance por historia o por desarrollador. Con − y + cambias el tamaño y con «Descargar PNG», justo arriba del calendario, guardas la línea de tiempo completa como imagen. Las barras rayadas con «H» son días de holgura.' },
     { el: ['ganttAyuda', 'gantt'], t: 'Medios días con un clic', x: 'Haz clic en la fecha de un día: el primer clic lo marca como medio día, el segundo como no laborable y el tercero lo deja hábil otra vez. El cambio también queda en la lista de días no laborables.' },
     { el: ['pnlDetalle'], t: 'Cronograma diario y resumen', x: 'El detalle día por día: horas de cada desarrollador, historia en curso y puntos restantes; los festivos aparecen como días sin trabajo. En la otra pestaña está el resumen por historia.' },
-    { el: ['acciones'], t: 'Abrir y descargar Excel', x: 'Descarga el cronograma en Excel para compartirlo y guárdalo: con «Abrir Excel» lo retomas o ajustas después, porque el archivo trae todo el proyecto.' },
+    { el: ['acciones'], t: 'Guardar, reabrir y empezar de nuevo', x: 'Arriba tienes todo junto: «Descargar Excel» guarda el proyecto completo para compartirlo; «Abrir Excel» lo retoma después; y «Borrar todo» limpia las historias y los parámetros para empezar un proyecto nuevo.' },
     { t: '¡Listo!', x: 'Puedes repetir este recorrido cuando quieras con el botón «Tutorial».', fin: true }
   ];
   var tour = { i: 0, antes: null };
